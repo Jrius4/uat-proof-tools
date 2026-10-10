@@ -1,0 +1,24 @@
+id: UAT-AND-001
+title: Find the display settings
+proves: A user can open Settings and reach the display options, including dark theme.
+platforms: [android]
+targets:
+  android:
+    appId: com.android.settings
+steps:
+  - id: s1
+    do: Open the Settings app
+    narration: We open the Settings app on the phone.
+    caption: Open Settings
+  - id: s2
+    do: Tap "Display & touch"
+    narration: We tap Display and touch.
+    caption: Open display options
+expect:
+  - id: e1
+    check: The text "Dark theme" is visible
+    narration: The display options include a dark theme setting.
+    caption: Dark theme option shown
+outro:
+  pass: The display options are reachable and include dark theme. This check passed.
+  fail: This check did not pass. The QA report lists what went wrong.

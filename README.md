@@ -93,6 +93,7 @@ outro:
 | Intro | Title + "what this proves", spoken | ID, platform, commit, date |
 | Subtitles | Burned in, large | Soft track + `.vtt`/`.srt` |
 | Step tag | none | `s2 Enter email` badge |
+| Taps | Gold ring where a finger tapped (Android) | Same |
 | Checks | Green ✓ banner, held ~1.5 s | Same, with check text |
 | Pacing | Holds the last frame until speech ends | Tight; long idle waits sped up (≤ 4×) |
 | End card | PASSED / NOT PASSED + one line | Same + failed ids |
@@ -106,22 +107,28 @@ Both play in any player (H.264/AAC, MP4, chapter marks). Tune voice, rate and pa
 Verified on this machine (macOS, Node 24, ffmpeg 9.0.2, Playwright 1.59.1):
 
 - **Web, end to end** against the TodoMVC demo: record → both profiles → frames inspected (title, captions, banners, end card), speech aligned to subtitle cues within ~100 ms, soft subtitle track, chapters, 48 kHz AAC.
+- **Android, end to end on a real emulator** (Android 17, 1080×2424; Maestro 2.11.0, scrcpy 5.0.1): the stock Settings app, [examples/android-settings](examples/android-settings). Real Maestro `commands.json` parsed (labels, start times, statuses), real scrcpy recording started and finalised on SIGINT, frames at each marker match the timeline, portrait layout and captions render correctly at full resolution. The run found and fixed two real bugs (see below).
 - **Failure path**: a deliberately wrong expectation produced a red banner, corrected narration, NOT PASSED end card, and exit code 2.
-- **Mobile orchestration and portrait layout**, using stand-in `adb`/`scrcpy`/`maestro` scripts (recorder start/stop, SIGINT handling, timeline math, 540×1200 rendering).
-- 25 unit tests (`npm test --prefix engine`): pacing plan, subtitle cueing, scenario validation, Maestro result parsing.
+- 27 unit tests (`npm test --prefix engine`): pacing plan, subtitle cueing, scenario validation, Maestro parsing and tap extraction.
 - Plugin manifest passes `claude plugin validate`.
+
+Fixed after real-device testing:
+
+- scrcpy's "Recording started" line is block-buffered over a pipe and only appears at exit, so the recorder waited 30 s and mis-aligned every marker by ~30 s. Recording start is now detected from the output file appearing.
+- scrcpy's `--show-touches` is enabled but **does not draw anything for Maestro's injected taps**. Taps are now drawn by the renderer: Maestro's log records `Tapping at (x, y)`, and a gold ring is overlaid at that point.
 
 **Not yet verified, so expect a first-run adjustment:**
 
-- Real **Maestro** `commands.json` shape and `label:` behaviour on each command type (parser is defensive and falls back to console timing; see [maestro notes](skills/uat-drivers/references/maestro.md)). No device or simulator was available.
-- Real **scrcpy** / **simctl** "recording started" messages and file finalization on SIGINT.
+- **iOS Simulator** (Maestro on iOS and `simctl` recording): no booted simulator was used.
 - **OBS** WebSocket recording (code written against obs-websocket v5; no OBS session was run).
 - **Piper** TTS (adapter written, Piper not installed).
 - The skills and agents running live inside Claude Code (structure validated, behaviour not exercised).
+- Android on a physical phone, other Android versions, and apps other than Settings.
 
 Known limits:
 
-- iOS Simulator recordings (`simctl`) contain no touch indicators. Use the `desktop` platform on the Simulator window if taps must be visible.
+- **Tap rings are Android-only.** They come from Maestro's log, with a `render.tapLagMs` (650 ms default) because the log line precedes the touch landing; calibrated on one slow emulator, so adjust if rings look early or late. iOS Simulator recordings (`simctl`) have no touch indicators and no rings; use the `desktop` platform on the Simulator window if taps must be visible. Taps by `swipe`, `scroll` or coordinates without a "Tapping at" log line get no ring.
+- **Maestro start-up is dead air.** Maestro takes ~14 s to start before its first command; that lead-in is cut automatically because rendering starts at the first step. Individual Maestro commands can also be slow on emulators (a 5 s tap is normal there), which shows up as idle time inside a step; the `qa` profile speeds those up.
 - Playwright is pinned to **1.59.1** because it matches the browser already cached on this machine; newer versions need `npx playwright install chromium` (a download). 1.59's `showActions` is simpler than 1.62's; the fixture upgrades automatically.
 - Captions are rendered as images because the installed ffmpeg lacks `drawtext`/`libass`.
 - `sensitive: true` keeps secrets out of narration and captions, but it cannot blur text a driver types into a visible field. Use throwaway test accounts and let `uat-reviewer` check frames.
@@ -135,6 +142,6 @@ skills/   uat-proof (orchestrator) · uat-scenario · uat-drivers · uat-record 
 agents/   uat-scenario-writer · uat-test-engineer · uat-video-producer · uat-reviewer
 engine/   uatp CLI (Node, no build step): lib/recorders/{web,mobile,obs}, lib/{compose,cards,subtitles,tts}, playwright/uat-fixture.ts
 config/   uatp.config.example.yaml
-examples/ todomvc: a runnable web scenario
+examples/ todomvc (web) · android-settings (Android emulator)
 docs/     research-guide.md (the tool survey that led here)
 ```

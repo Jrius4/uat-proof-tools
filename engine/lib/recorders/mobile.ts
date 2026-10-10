@@ -1,11 +1,34 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RecordContext } from './types.ts';
-import { findFlow, fromStdout, parseCommands, startMaestro } from './maestro.ts';
-import { log, run, sleep, spawnLogged, stopGracefully, waitForOutput } from '../util.ts';
+import { findFlow, fromStdout, parseCommands, parseTaps, startMaestro } from './maestro.ts';
+import { ffprobeSize, log, run, sleep, spawnLogged, stopGracefully } from '../util.ts';
 import { finalizeResult, normalizeMarkers, resultPath, timelinePath, writeJson } from '../timeline.ts';
 
 type Screen = { start(rawFile: string): ReturnType<typeof spawnLogged>; readyPattern: RegExp; label: string };
+
+/**
+ * Know when the recorder is really capturing. scrcpy's "Recording started" line goes to a block-buffered stdout,
+ * so over a pipe it only appears when the process exits (a real-device run mis-aligned the timeline by ~30 s).
+ * The output file appearing with data is the reliable signal; the log line is accepted too if it does arrive.
+ */
+async function waitForRecordingStart(rec: ReturnType<typeof spawnLogged>, file: string, pattern: RegExp, timeoutMs: number): Promise<boolean> {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    if (existsSync(file) && statSync(file).size > 0) return true;
+    if (pattern.test(rec.getOutput())) return true;
+    if (rec.child.exitCode !== null) return false;
+    await sleep(25);
+  }
+  return false;
+}
+
+/** Screen size in pixels as Android reports it (an "Override size" wins over "Physical size"). */
+function deviceSize(serial: string): { width: number; height: number } | null {
+  const out = run('adb', ['-s', serial, 'shell', 'wm', 'size']).stdout;
+  const m = /Override size: (\d+)x(\d+)/.exec(out) ?? /Physical size: (\d+)x(\d+)/.exec(out);
+  return m ? { width: +m[1], height: +m[2] } : null;
+}
 
 function androidSerial(preferred?: string): string | undefined {
   if (preferred) return preferred;
@@ -49,12 +72,11 @@ export async function recordMobile(ctx: RecordContext, platform: 'android' | 'io
   const notes: string[] = [];
   log(`${platform}: recording with ${screen.label}, driving ${flow}`);
   const rec = screen.start(rawFile);
-  const ready = await waitForOutput(rec, screen.readyPattern, 30000);
+  const ready = await waitForRecordingStart(rec, rawFile, screen.readyPattern, 30000);
   const recordingStart = Date.now();
   if (!ready) {
     if (rec.child.exitCode !== null) throw new Error(`${screen.label} exited early:\n${rec.getOutput().slice(-800)}`);
-    notes.push(`${screen.label} gave no "started" message; assumed recording began after 2 s`);
-    await sleep(2000);
+    notes.push(`${screen.label} produced no video file within 30 s; timeline may be misaligned`);
   }
   await sleep(500); // let the first frames land so title-card-to-app cut is clean
 
@@ -76,7 +98,15 @@ export async function recordMobile(ctx: RecordContext, platform: 'android' | 'io
   }
   if (!parsed) throw new Error(`No "[sN]"/"[eN]" labelled commands found in the Maestro run. Every step needs "label: '[s1] …'" in the flow. See ${join(outDir, 'driver.log')}`);
 
-  writeJson(timelinePath(outDir), { scenarioId: scenario.id, platform, video: 'raw.mp4', markers: normalizeMarkers(parsed.markers) });
+  // Android only: Maestro logs device-pixel coordinates. iOS logs points, whose scale to the video is not known here.
+  let taps: ReturnType<typeof parseTaps> = [];
+  if (platform === 'android') {
+    const dev = deviceSize(device!);
+    const vid = ffprobeSize(rawFile);
+    taps = parseTaps(testOut, recordingStart, dev ? { x: vid.width / dev.width, y: vid.height / dev.height } : { x: 1, y: 1 });
+    if (!dev) notes.push('could not read device screen size; assumed the recording is not scaled when placing tap markers');
+  }
+  writeJson(timelinePath(outDir), { scenarioId: scenario.id, platform, video: 'raw.mp4', markers: normalizeMarkers(parsed.markers), taps });
   const result = finalizeResult(scenario, { scenarioId: scenario.id, platform, runner: 'maestro', startedAt, items: parsed.items, notes });
   if (code !== 0) result.passed = false;
   writeJson(resultPath(outDir), result);

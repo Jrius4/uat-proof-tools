@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Config } from '../config.ts';
 import type { Scenario } from '../scenario.ts';
-import type { ItemResult, Marker } from '../timeline.ts';
+import type { ItemResult, Marker, Tap } from '../timeline.ts';
 import { spawnLogged } from '../util.ts';
 
 const ID_RE = /\[((?:s|e)\d+)\]/;
@@ -97,4 +97,31 @@ export function fromStdout(lines: { t: number; line: string }[], recordingStartE
 export function startMaestro(opts: { flow: string; testOutputDir: string; junit: string; device?: string; cwd: string }) {
   const args = ['test', '--test-output-dir', opts.testOutputDir, '--format', 'JUNIT', '--output', opts.junit, ...(opts.device ? ['--udid', opts.device] : []), ...flowEnvArgs(opts.flow), opts.flow];
   return spawnLogged('maestro', args, { cwd: opts.cwd });
+}
+
+/**
+ * Tap positions from Maestro's own log: "HH:mm:ss.SSS [ INFO] … Tapping at (365, 1912) …".
+ * Log times are local clock with no date, so they are anchored to the day of the recording start.
+ * Coordinates are device pixels; `scale` converts them to the recording's pixel space.
+ */
+export function parseTaps(testOutputDir: string, recordingStartEpochMs: number, scale = { x: 1, y: 1 }): Tap[] {
+  if (!existsSync(testOutputDir)) return [];
+  const file = walk(testOutputDir).find((f) => /maestro\.log$/.test(f));
+  if (!file) return [];
+  return tapsFromLog(readFileSync(file, 'utf8'), recordingStartEpochMs, scale);
+}
+
+export function tapsFromLog(log: string, recordingStartEpochMs: number, scale = { x: 1, y: 1 }): Tap[] {
+  const taps: Tap[] = [];
+  const day = new Date(recordingStartEpochMs);
+  for (const line of log.split('\n')) {
+    const m = /^(\d{2}):(\d{2}):(\d{2})[.:](\d{3})\b.*Tapping at \((\d+), ?(\d+)\)/.exec(line);
+    if (!m) continue;
+    const t = new Date(day);
+    t.setHours(+m[1], +m[2], +m[3], +m[4]);
+    let epoch = t.getTime();
+    if (epoch < recordingStartEpochMs - 12 * 3600_000) epoch += 24 * 3600_000; // crossed midnight
+    taps.push({ atMs: epoch - recordingStartEpochMs, x: Math.round(+m[5] * scale.x), y: Math.round(+m[6] * scale.y) });
+  }
+  return taps.filter((t) => t.atMs >= 0);
 }

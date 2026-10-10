@@ -5,12 +5,17 @@ import type { Scenario } from './scenario.ts';
 /** When a step or check began, in ms since the first video frame. */
 export type Marker = { id: string; startMs: number };
 
+/** A finger tap on the recording, in the recording's own pixel space, ms since the first video frame. */
+export type Tap = { atMs: number; x: number; y: number };
+
 export type Timeline = {
   scenarioId: string;
   platform: string;
   /** File name of the raw recording, relative to the run directory. */
   video: string;
   markers: Marker[];
+  /** Tap positions so the renderer can draw a marker (Android's own "show touches" does not fire for Maestro taps). */
+  taps?: Tap[];
 };
 
 export type ItemResult = { id: string; passed: boolean; error?: string };

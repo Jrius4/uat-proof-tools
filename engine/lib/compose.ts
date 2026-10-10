@@ -9,7 +9,7 @@ import { speak } from './tts/index.ts';
 import type { Clip } from './tts/index.ts';
 import { cuesFor, toSrt, toVtt } from './subtitles.ts';
 import type { Cue } from './subtitles.ts';
-import { captionHtml, checkBannerHtml, endCardHtml, openCards, stepBadgeHtml, titleCardHtml } from './cards.ts';
+import { captionHtml, checkBannerHtml, endCardHtml, openCards, stepBadgeHtml, tapRingHtml, titleCardHtml } from './cards.ts';
 
 export type PlanItem = { id: string; kind: 'step' | 'check'; label: string; caption?: string; narration: string };
 
@@ -164,6 +164,15 @@ export async function renderProfile(opts: {
         const f = join(work, `badge-${i}.png`);
         await cards.render(stepBadgeHtml(u, it.id, it.label), f, { transparent: true });
         ov.push({ png: f, fromMs: 0, toMs: seg.outDurMs });
+      }
+      // Tap markers: only taps that land inside this segment's recorded span, mapped through any speed-up.
+      for (const [k, tap] of (tl.taps ?? []).entries()) {
+        const at = tap.atMs + offset + cfg.render.tapLagMs;
+        if (at < seg.srcStartMs || at >= seg.srcStartMs + seg.srcLenMs) continue;
+        const f = join(work, `tap-${i}-${k}.png`);
+        await cards.render(tapRingHtml(u, tap.x * (W / rawSize.width), tap.y * (H / rawSize.height)), f, { transparent: true });
+        const from = (at - seg.srcStartMs) / seg.speed;
+        ov.push({ png: f, fromMs: from, toMs: Math.min(seg.outDurMs, from + cfg.render.tapShowMs) });
       }
       if (it.kind === 'check' || !seg.passed) {
         const text = !seg.passed && it.kind === 'step' ? 'Step did not complete' : p.stepBadge ? `${it.id} ${it.label}` : it.caption ?? it.narration;

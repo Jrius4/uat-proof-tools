@@ -36,9 +36,10 @@ File names: `flows/uat/<ID>.yaml`, or `<ID>.android.yaml` / `<ID>.ios.yaml` when
 ## How the engine uses it
 
 - It runs `maestro test --test-output-dir <run>/maestro …` while `scrcpy` (Android) or `simctl` (iOS) records.
-- `commands.json` in that folder gives each command's start time and status. Commands whose label contains `[sN]` or `[eN]` become timeline markers (first occurrence = start) and pass/fail (all commands for that id must complete).
+- `commands.json` in that folder (verified against Maestro 2.11.0) is an array of `{command, metadata}`; `label` sits inside the command and `metadata.timestamp` is the command's start in epoch ms. It gives each command's start time and status. Commands whose label contains `[sN]` or `[eN]` become timeline markers (first occurrence = start) and pass/fail (all commands for that id must complete).
 - If no labelled command is found in `commands.json`, the engine falls back to the arrival time of Maestro's console lines (less accurate, noted in `result.json`).
-- If a command shape does not accept `label:` in your Maestro version, check `maestro --help` / docs for the map form and adjust; run the flow once by hand to confirm.
+- `label:` works on `launchApp`, `tapOn` and `assertVisible` in the map form (verified on 2.11.0). Run a new flow once by hand to confirm other commands accept it.
+- Maestro takes ~14 s to start before its first command, and slow emulators make some commands take seconds. Neither is a problem: rendering starts at the first labelled step.
 
 ## Making apps testable
 
@@ -48,5 +49,5 @@ File names: `flows/uat/<ID>.yaml`, or `<ID>.android.yaml` / `<ID>.ios.yaml` when
 
 ## Platform notes
 
-- Android: emulator or USB device; `scrcpy --show-touches` is used so taps are visible.
+- Android: emulator or USB device. scrcpy's `--show-touches` does not draw anything for Maestro's injected taps, so the renderer overlays a ring using the `Tapping at (x, y)` line from Maestro's own log. Prefer `tapOn` with text/id; taps with no such log line get no ring.
 - iOS Simulator: recorded with `xcrun simctl io recordVideo`, which captures the screen without touch indicators. If tap visibility matters, record the Simulator window with the `desktop` (OBS) platform instead.

@@ -1,0 +1,15 @@
+appId: com.android.settings
+name: "UAT-AND-001: Find the display settings"
+---
+- stopApp
+- launchApp:
+    label: "[s1] Open Settings"
+- assertVisible:
+    text: "Network & internet"
+    label: "[s1] Open Settings"
+- tapOn:
+    text: "Display & touch"
+    label: "[s2] Tap Display & touch"
+- assertVisible:
+    text: "Dark theme"
+    label: "[e1] Dark theme is visible"

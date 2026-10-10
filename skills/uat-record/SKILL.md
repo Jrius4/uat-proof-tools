@@ -49,4 +49,6 @@ If narration lands slightly early or late in the rendered video, set `syncOffset
 - *Chromium missing / version mismatch*: engine pins Playwright 1.59.1 (matches the cached browser). Otherwise `npx playwright install chromium` inside `engine/`.
 - *No "[sN]" labelled commands*: the Maestro flow lacks labels; see uat-drivers.
 - *scrcpy/simctl produced no video*: read `recorder.log`.
+- *Rings look early/late (Android)*: tune `render.tapLagMs` in `uatp.config.yaml`.
+- *Everything is shifted by many seconds*: check `result.json` notes for "produced no video file within 30 s".
 - *Several devices connected*: pin one in `uatp.config.yaml` → `devices`.

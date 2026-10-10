@@ -73,3 +73,10 @@ export function checkBannerHtml(u: number, ok: boolean, text: string): string {
     <div style="background:${ok ? 'rgba(22,101,52,.94)' : 'rgba(153,27,27,.94)'};border-radius:${u * 0.5}px;padding:${u * 0.45}px ${u * 1}px;
       font-weight:700;font-size:${u * 1.05}px;line-height:1.3;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.4)">${ok ? '✓' : '✗'} ${esc(text)}</div></div>`;
 }
+
+/** Ring marking where a finger tapped; x/y are in the output frame's pixels. */
+export function tapRingHtml(u: number, x: number, y: number): string {
+  const r = u * 1.7;
+  return `<div style="position:absolute;left:${x - r}px;top:${y - r}px;width:${2 * r}px;height:${2 * r}px;border-radius:50%;
+    border:${Math.max(3, u * 0.22)}px solid rgba(255,196,0,.96);background:rgba(255,196,0,.30);box-shadow:0 0 ${u * 0.8}px rgba(0,0,0,.45)"></div>`;
+}
