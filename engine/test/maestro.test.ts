@@ -53,3 +53,9 @@ test('log lines from before the recording started are dropped', () => {
   const start = new Date(2026, 9, 10, 18, 30, 0).getTime();
   assert.deepEqual(tapsFromLog('18:29:48.783 [ INFO] x: Tapping at (1, 2)', start), []);
 });
+
+test('iOS "Try tapping at" lines are read too, scaled from points to pixels', () => {
+  const start = new Date(2026, 9, 10, 18, 46, 0).getTime();
+  const log = '18:46:26.917 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (91, 359) using hierarchy based logic for wait';
+  assert.deepEqual(tapsFromLog(log, start, { x: 3, y: 3 }), [{ atMs: 26917, x: 273, y: 1077 }]);
+});

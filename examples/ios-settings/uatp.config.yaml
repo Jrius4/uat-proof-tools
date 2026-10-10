@@ -1,0 +1,36 @@
+# uatp.config.yaml: every key is optional. Defaults shown.
+
+# Where things live, relative to the project root.
+scenariosDir: uat/scenarios
+testsDir: tests/uat          # Playwright specs: <ID>.spec.ts
+flowsDir: flows/uat          # Maestro flows: <ID>.yaml or <ID>.<platform>.yaml
+evidenceDir: evidence
+
+# Narration voice. `say` is built into macOS: list voices with `say -v '?'`.
+tts:
+  engine: say                # say | piper
+  voice: Samantha
+  rate: 165                  # words per minute; 150-175 is easy to follow
+  # piperModel: /path/to/en_US-voice.onnx   (when engine: piper)
+
+render:
+  fps: 30
+  maxWidth: 1920
+  crf: 20
+
+# Calibrate if narration lands slightly early (+) or late (-) against the action. Milliseconds.
+syncOffsetMs: { web: 0, android: 0, ios: 0, desktop: 0 }
+
+# Pin devices when several are connected.
+devices: {}
+#  android: emulator-5554
+#  ios: 00000000-0000-0000-0000-000000000000
+
+obs:
+  host: 127.0.0.1
+  port: 4455
+  passwordEnv: OBS_WS_PASSWORD   # name of the env var holding the OBS WebSocket password
+
+# Override any profile field, e.g. make stakeholder videos slower:
+# profiles:
+#   stakeholder: { breathingMs: 900 }

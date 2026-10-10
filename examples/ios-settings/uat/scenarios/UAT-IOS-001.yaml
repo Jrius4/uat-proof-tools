@@ -1,0 +1,24 @@
+id: UAT-IOS-001
+title: Find the general settings
+proves: A user can open Settings and reach the General options, including About.
+platforms: [ios]
+targets:
+  ios:
+    appId: com.apple.Preferences
+steps:
+  - id: s1
+    do: Open the Settings app
+    narration: We open the Settings app on the iPhone.
+    caption: Open Settings
+  - id: s2
+    do: Tap "General"
+    narration: We tap General.
+    caption: Open General
+expect:
+  - id: e1
+    check: The text "About" is visible
+    narration: The General options include an About entry.
+    caption: About entry shown
+outro:
+  pass: The General options are reachable and include About. This check passed.
+  fail: This check did not pass. The QA report lists what went wrong.

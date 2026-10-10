@@ -1,0 +1,15 @@
+appId: com.apple.Preferences
+name: "UAT-IOS-001: Find the general settings"
+---
+- stopApp
+- launchApp:
+    label: "[s1] Open Settings"
+- assertVisible:
+    text: "General"
+    label: "[s1] Open Settings"
+- tapOn:
+    text: "General"
+    label: "[s2] Tap General"
+- assertVisible:
+    text: "About"
+    label: "[e1] About is visible"

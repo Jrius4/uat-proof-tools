@@ -108,26 +108,27 @@ Verified on this machine (macOS, Node 24, ffmpeg 9.0.2, Playwright 1.59.1):
 
 - **Web, end to end** against the TodoMVC demo: record → both profiles → frames inspected (title, captions, banners, end card), speech aligned to subtitle cues within ~100 ms, soft subtitle track, chapters, 48 kHz AAC.
 - **Android, end to end on a real emulator** (Android 17, 1080×2424; Maestro 2.11.0, scrcpy 5.0.1): the stock Settings app, [examples/android-settings](examples/android-settings). Real Maestro `commands.json` parsed (labels, start times, statuses), real scrcpy recording started and finalised on SIGINT, frames at each marker match the timeline, portrait layout and captions render correctly at full resolution. The run found and fixed two real bugs (see below).
+- **iOS Simulator, end to end** (iPhone 16, iOS 18.3; Maestro 2.11.0, `simctl`): the stock Settings app, [examples/ios-settings](examples/ios-settings). Frames checked against the timeline and the tap ring lands on the tapped row. Also surfaced a renderer bug (below).
 - **Failure path**: a deliberately wrong expectation produced a red banner, corrected narration, NOT PASSED end card, and exit code 2.
-- 27 unit tests (`npm test --prefix engine`): pacing plan, subtitle cueing, scenario validation, Maestro parsing and tap extraction.
+- 29 unit tests (`npm test --prefix engine`): pacing plan, subtitle cueing, scenario validation, Maestro parsing and tap extraction.
 - Plugin manifest passes `claude plugin validate`.
 
 Fixed after real-device testing:
 
 - scrcpy's "Recording started" line is block-buffered over a pipe and only appears at exit, so the recorder waited 30 s and mis-aligned every marker by ~30 s. Recording start is now detected from the output file appearing.
-- scrcpy's `--show-touches` is enabled but **does not draw anything for Maestro's injected taps**. Taps are now drawn by the renderer: Maestro's log records `Tapping at (x, y)`, and a gold ring is overlaid at that point.
+- scrcpy's `--show-touches` is enabled but **does not draw anything for Maestro's injected taps**. Taps are now drawn by the renderer: Maestro's log records the tap position (`Tapping at (x, y)` on Android, `Try tapping at (x, y)` in points on iOS), and a gold ring is overlaid at that point.
+- **Sparse recordings shifted every step earlier.** `simctl` writes a frame only when the screen changes, so after seeking to the start of a step ffmpeg returned the *next* change and the cut slid it to t=0. On iOS the content ran ~1.4 s ahead of the captions. The raw recording is now re-timed to a constant frame rate once per run before it is cut (regression test: `engine/test/cfr.test.ts`). Android was unaffected because scrcpy emits frames while idle.
 
 **Not yet verified, so expect a first-run adjustment:**
 
-- **iOS Simulator** (Maestro on iOS and `simctl` recording): no booted simulator was used.
 - **OBS** WebSocket recording (code written against obs-websocket v5; no OBS session was run).
 - **Piper** TTS (adapter written, Piper not installed).
 - The skills and agents running live inside Claude Code (structure validated, behaviour not exercised).
-- Android on a physical phone, other Android versions, and apps other than Settings.
+- Physical phones (Android and iOS), other OS versions and devices, and apps other than the stock Settings app.
 
 Known limits:
 
-- **Tap rings are Android-only.** They come from Maestro's log, with a `render.tapLagMs` (650 ms default) because the log line precedes the touch landing; calibrated on one slow emulator, so adjust if rings look early or late. iOS Simulator recordings (`simctl`) have no touch indicators and no rings; use the `desktop` platform on the Simulator window if taps must be visible. Taps by `swipe`, `scroll` or coordinates without a "Tapping at" log line get no ring.
+- **Tap rings come from Maestro's log, not the OS.** There is a per-platform `tapLagMs` (Android 650 ms, iOS 300 ms) because the log line precedes the touch landing. Measured on slow emulators/simulators, and the delay varies with load (0.4 s to 2 s between tap and visible reaction on iOS), so adjust if rings look early or late. iOS points are converted to pixels using the simulator's screen scale. Taps by `swipe`, `scroll` or coordinates without a "tapping at" log line get no ring.
 - **Maestro start-up is dead air.** Maestro takes ~14 s to start before its first command; that lead-in is cut automatically because rendering starts at the first step. Individual Maestro commands can also be slow on emulators (a 5 s tap is normal there), which shows up as idle time inside a step; the `qa` profile speeds those up.
 - Playwright is pinned to **1.59.1** because it matches the browser already cached on this machine; newer versions need `npx playwright install chromium` (a download). 1.59's `showActions` is simpler than 1.62's; the fixture upgrades automatically.
 - Captions are rendered as images because the installed ffmpeg lacks `drawtext`/`libass`.
@@ -142,6 +143,6 @@ skills/   uat-proof (orchestrator) · uat-scenario · uat-drivers · uat-record 
 agents/   uat-scenario-writer · uat-test-engineer · uat-video-producer · uat-reviewer
 engine/   uatp CLI (Node, no build step): lib/recorders/{web,mobile,obs}, lib/{compose,cards,subtitles,tts}, playwright/uat-fixture.ts
 config/   uatp.config.example.yaml
-examples/ todomvc (web) · android-settings (Android emulator)
+examples/ todomvc (web) · android-settings (Android emulator) · ios-settings (iOS Simulator)
 docs/     research-guide.md (the tool survey that led here)
 ```

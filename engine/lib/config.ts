@@ -30,7 +30,9 @@ export type Config = {
   testsDir: string;
   flowsDir: string;
   tts: { engine: 'say' | 'piper'; voice: string; rate: number; piperModel?: string };
-  render: { fps: number; maxWidth: number; crf: number; tapLagMs: number; tapShowMs: number };
+  render: { fps: number; maxWidth: number; crf: number; tapShowMs: number };
+  /** Delay between Maestro logging a tap and the touch landing, per platform. Measured on slow emulators; tune if rings look early or late. */
+  tapLagMs: Record<string, number>;
   /** Added to every timeline offset; calibrate if narration lands early/late. */
   syncOffsetMs: Record<string, number>;
   devices: { android?: string; ios?: string };
@@ -44,7 +46,8 @@ export const DEFAULTS: Omit<Config, 'projectDir'> = {
   testsDir: 'tests/uat',
   flowsDir: 'flows/uat',
   tts: { engine: 'say', voice: 'Samantha', rate: 165 },
-  render: { fps: 30, maxWidth: 1920, crf: 20, tapLagMs: 650, tapShowMs: 800 },
+  render: { fps: 30, maxWidth: 1920, crf: 20, tapShowMs: 800 },
+  tapLagMs: { android: 650, ios: 300 },
   syncOffsetMs: { web: 0, android: 0, ios: 0, desktop: 0 },
   devices: {},
   obs: { host: '127.0.0.1', port: 4455, passwordEnv: 'OBS_WS_PASSWORD' },

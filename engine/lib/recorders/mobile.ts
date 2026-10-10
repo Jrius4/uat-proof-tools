@@ -23,6 +23,31 @@ async function waitForRecordingStart(rec: ReturnType<typeof spawnLogged>, file: 
   return false;
 }
 
+/** Recording pixels per Maestro coordinate unit, Android (device pixels). */
+function androidScale(serial: string, vid: { width: number; height: number }): { x: number; y: number } | null {
+  const dev = deviceSize(serial);
+  return dev ? { x: vid.width / dev.width, y: vid.height / dev.height } : null;
+}
+
+/**
+ * Recording pixels per Maestro coordinate unit, iOS (points). The simulator's device-type profile lists the
+ * screen's pixel size and scale (iPhone 16: 1179x2556 at 3x), so points = pixels / scale.
+ */
+function iosScale(udid: string, vid: { width: number; height: number }): { x: number; y: number } | null {
+  try {
+    const list = JSON.parse(run('xcrun', ['simctl', 'list', 'devices', '-j']).stdout).devices as Record<string, { udid: string; deviceTypeIdentifier: string }[]>;
+    const typeId = Object.values(list).flat().find((d) => d.udid === udid)?.deviceTypeIdentifier;
+    const types = JSON.parse(run('xcrun', ['simctl', 'list', 'devicetypes', '-j']).stdout).devicetypes as { identifier: string; bundlePath: string }[];
+    const bundle = types.find((t) => t.identifier === typeId)?.bundlePath;
+    if (!bundle) return null;
+    const prof = JSON.parse(run('plutil', ['-convert', 'json', '-o', '-', `${bundle}/Contents/Resources/profile.plist`]).stdout);
+    const { mainScreenWidth: w, mainScreenHeight: h, mainScreenScale: sc } = prof;
+    return w && h && sc ? { x: (vid.width / w) * sc, y: (vid.height / h) * sc } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Screen size in pixels as Android reports it (an "Override size" wins over "Physical size"). */
 function deviceSize(serial: string): { width: number; height: number } | null {
   const out = run('adb', ['-s', serial, 'shell', 'wm', 'size']).stdout;
@@ -98,14 +123,12 @@ export async function recordMobile(ctx: RecordContext, platform: 'android' | 'io
   }
   if (!parsed) throw new Error(`No "[sN]"/"[eN]" labelled commands found in the Maestro run. Every step needs "label: '[s1] …'" in the flow. See ${join(outDir, 'driver.log')}`);
 
-  // Android only: Maestro logs device-pixel coordinates. iOS logs points, whose scale to the video is not known here.
+  // Maestro logs tap coordinates in device pixels (Android) or points (iOS); convert to the recording's pixels.
+  const vid = ffprobeSize(rawFile);
+  const factor = platform === 'android' ? androidScale(device!, vid) : iosScale(device!, vid);
   let taps: ReturnType<typeof parseTaps> = [];
-  if (platform === 'android') {
-    const dev = deviceSize(device!);
-    const vid = ffprobeSize(rawFile);
-    taps = parseTaps(testOut, recordingStart, dev ? { x: vid.width / dev.width, y: vid.height / dev.height } : { x: 1, y: 1 });
-    if (!dev) notes.push('could not read device screen size; assumed the recording is not scaled when placing tap markers');
-  }
+  if (factor) taps = parseTaps(testOut, recordingStart, factor);
+  else notes.push('could not work out the screen scale; tap markers skipped');
   writeJson(timelinePath(outDir), { scenarioId: scenario.id, platform, video: 'raw.mp4', markers: normalizeMarkers(parsed.markers), taps });
   const result = finalizeResult(scenario, { scenarioId: scenario.id, platform, runner: 'maestro', startedAt, items: parsed.items, notes });
   if (code !== 0) result.passed = false;

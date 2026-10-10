@@ -1,4 +1,4 @@
-import { writeFileSync, copyFileSync } from 'node:fs';
+import { writeFileSync, copyFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config, Profile, ProfileName } from './config.ts';
 import type { Scenario } from './scenario.ts';
@@ -70,6 +70,19 @@ function ff(args: string[]) {
   runOrThrow('ffmpeg', ['-y', '-loglevel', 'error', '-nostdin', ...args]);
 }
 
+
+/**
+ * Re-time the raw recording to a constant frame rate, once per run. Screen recorders such as `simctl` write a
+ * frame only when the picture changes, so after seeking to the start of a step the first frame returned is the
+ * *next* change and `setpts=PTS-STARTPTS` slides it to t=0, shifting everything earlier by the idle time.
+ * Constant-rate frames make seeking exact. The last frame is held out to the container's real duration.
+ */
+export function constantRate(rawFile: string, outFile: string, durationMs: number, fps: number): string {
+  if (existsSync(outFile) && statSync(outFile).mtimeMs >= statSync(rawFile).mtimeMs) return outFile;
+  ff(['-i', rawFile, '-an', '-vf', `fps=${fps},tpad=stop_mode=clone:stop_duration=${sec(durationMs)}`, '-t', sec(durationMs), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-pix_fmt', 'yuv420p', outFile]);
+  return outFile;
+}
+
 export type RenderOutput = { video: string; vtt: string; srt: string; thumb: string; passed: boolean; durationMs: number; warnings: string[] };
 
 export async function renderProfile(opts: {
@@ -94,6 +107,7 @@ export async function renderProfile(opts: {
   const videoMs = ffprobeDuration(rawFile);
 
   const work = ensureDir(join(dir, 'render', profileName));
+  const source = constantRate(rawFile, join(ensureDir(join(dir, 'render')), 'raw-cfr.mp4'), videoMs, fps);
   const ttsCache = ensureDir(join(dir, 'tts'));
   const items = planItems(sc);
   // Never narrate a failed check as if it had succeeded: replace the scripted line with a plain statement of what was expected.
@@ -167,7 +181,7 @@ export async function renderProfile(opts: {
       }
       // Tap markers: only taps that land inside this segment's recorded span, mapped through any speed-up.
       for (const [k, tap] of (tl.taps ?? []).entries()) {
-        const at = tap.atMs + offset + cfg.render.tapLagMs;
+        const at = tap.atMs + offset + (cfg.tapLagMs[platform] ?? 0);
         if (at < seg.srcStartMs || at >= seg.srcStartMs + seg.srcLenMs) continue;
         const f = join(work, `tap-${i}-${k}.png`);
         await cards.render(tapRingHtml(u, tap.x * (W / rawSize.width), tap.y * (H / rawSize.height)), f, { transparent: true });
@@ -211,7 +225,7 @@ export async function renderProfile(opts: {
   for (const [i, seg] of segs.entries()) {
     const out = join(work, `p-${String(i).padStart(2, '0')}-${seg.item.id}.mp4`);
     const ovs = segOverlays[i];
-    const args = ['-ss', sec(seg.srcStartMs), '-t', sec(seg.srcLenMs), '-i', rawFile];
+    const args = ['-ss', sec(seg.srcStartMs), '-t', sec(seg.srcLenMs), '-i', source];
     ovs.forEach((o) => args.push('-loop', '1', '-framerate', String(fps), '-t', sec(seg.outDurMs), '-i', o.png));
     const clip = clips[seg.item.id];
     if (clip) args.push('-i', clip.file);

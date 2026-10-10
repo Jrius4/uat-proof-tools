@@ -100,9 +100,9 @@ export function startMaestro(opts: { flow: string; testOutputDir: string; junit:
 }
 
 /**
- * Tap positions from Maestro's own log: "HH:mm:ss.SSS [ INFO] … Tapping at (365, 1912) …".
+ * Tap positions from Maestro's own log: "HH:mm:ss.SSS [ INFO] … Tapping at (365, 1912) …" (Android) or "… Try tapping at (91, 359) …" (iOS).
  * Log times are local clock with no date, so they are anchored to the day of the recording start.
- * Coordinates are device pixels; `scale` converts them to the recording's pixel space.
+ * Coordinates are device pixels on Android and points on iOS; `scale` converts them to the recording's pixel space.
  */
 export function parseTaps(testOutputDir: string, recordingStartEpochMs: number, scale = { x: 1, y: 1 }): Tap[] {
   if (!existsSync(testOutputDir)) return [];
@@ -115,7 +115,7 @@ export function tapsFromLog(log: string, recordingStartEpochMs: number, scale = 
   const taps: Tap[] = [];
   const day = new Date(recordingStartEpochMs);
   for (const line of log.split('\n')) {
-    const m = /^(\d{2}):(\d{2}):(\d{2})[.:](\d{3})\b.*Tapping at \((\d+), ?(\d+)\)/.exec(line);
+    const m = /^(\d{2}):(\d{2}):(\d{2})[.:](\d{3})\b.*[Tt]apping at \((\d+), ?(\d+)\)/.exec(line);
     if (!m) continue;
     const t = new Date(day);
     t.setHours(+m[1], +m[2], +m[3], +m[4]);

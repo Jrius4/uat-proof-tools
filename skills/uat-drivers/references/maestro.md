@@ -50,4 +50,5 @@ File names: `flows/uat/<ID>.yaml`, or `<ID>.android.yaml` / `<ID>.ios.yaml` when
 ## Platform notes
 
 - Android: emulator or USB device. scrcpy's `--show-touches` does not draw anything for Maestro's injected taps, so the renderer overlays a ring using the `Tapping at (x, y)` line from Maestro's own log. Prefer `tapOn` with text/id; taps with no such log line get no ring.
-- iOS Simulator: recorded with `xcrun simctl io recordVideo`, which captures the screen without touch indicators. If tap visibility matters, record the Simulator window with the `desktop` (OBS) platform instead.
+- iOS Simulator: recorded with `xcrun simctl io recordVideo`, which captures the screen without touch indicators and only writes frames when the picture changes (the renderer handles that). Tap rings are drawn from Maestro's `Try tapping at (x, y)` log line, converted from points to pixels with the simulator's screen scale (verified on an iPhone 16, iOS 18.3).
+- On a freshly booted simulator Maestro first installs and starts its own driver app (~15 s) and the first commands can be slow; none of that appears in the video because rendering starts at the first labelled step.
