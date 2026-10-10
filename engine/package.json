@@ -1,0 +1,23 @@
+{
+  "name": "uatp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic UAT/QA proof-video engine: record, narrate, subtitle, render.",
+  "bin": {
+    "uatp": "./bin/uatp.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@playwright/test": "1.59.1",
+    "ajv": "^8.20.0",
+    "obs-websocket-js": "^5.0.8",
+    "playwright": "1.59.1",
+    "yaml": "^2.9.1"
+  }
+}

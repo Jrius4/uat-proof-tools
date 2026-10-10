@@ -1,0 +1,30 @@
+id: UAT-010
+title: Sign in on the phone
+proves: A returning customer can sign in and reach their dashboard.
+platforms: [android, ios]
+targets:
+  android: { appId: com.example.app }
+  ios: { appId: com.example.app }
+preconditions:
+  - A test account exists; credentials are in the UAT_USER and UAT_PASS environment variables.
+steps:
+  - id: s1
+    do: Launch the app with a clean state
+    narration: We open the app on the sign-in screen.
+    caption: Open the app
+  - id: s2
+    do: Enter the test account email and password
+    narration: We enter the test account's details.
+    caption: Enter account details
+    sensitive: true
+  - id: s3
+    do: Tap "Log in"
+    narration: We tap Log in.
+expect:
+  - id: e1
+    check: Text "Welcome" is visible
+    narration: The dashboard opens and shows the welcome message.
+    caption: Welcome message shown
+outro:
+  pass: Sign-in works as expected. This check passed.
+  fail: This check did not pass. The QA report lists what went wrong.

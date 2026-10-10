@@ -1,5 +1,11 @@
 # UAT / QA Proof Videos: A Free, Open-Source Recording Guide
 
+> **Background research, not the manual.** This is the October 2026 tool survey that led to the `uat-proof` toolkit.
+> For how to use the toolkit, see the [README](../README.md). Where they differ, the README wins. Known differences:
+> the engine pins Playwright 1.59.1 (its screencast `showActions` has fewer options than 1.62), iOS recording uses
+> `simctl` (no touch indicators), and burned-in captions are rendered as images because the installed ffmpeg has no
+> `drawtext`/`libass`.
+
 Last researched: 10 October 2026. Covers web, Flutter and React Native apps, driven by Claude Code (Sonnet 5.5).
 
 ## 1. Goal and constraints
@@ -38,6 +44,8 @@ Star counts come from different snapshots (some from July to October 2026), so t
 | Quick screen clips | Cap | ~21K stars; active | AGPL-3.0 | Loom-style; macOS and Windows; optional |
 | Video polish | ffmpeg | Stars not checked; long-standing standard | Free | Convert, trim, caption, join |
 | Android emulator | Android Studio emulator | n/a | Free | Test without a physical phone |
+| Narration (text-to-speech) | Piper | Maintained by the Open Home Foundation at OHF-Voice/piper1-gpl; the original repo had 11K+ stars and was archived 6 Oct 2025. New repo's stars not verified | GPL-3.0-or-later | Fast, runs on CPU. Each voice model has its own license, so check it |
+| Narration (text-to-speech) | Kokoro | Stars not verified | Apache-2.0 | 82M-parameter model; better quality than Piper, heavier. Neither engine clones a voice from a short sample |
 
 ## 4. Cost traps to avoid
 
@@ -134,6 +142,110 @@ ffmpeg -i UAT-001.mp4 -vf "drawtext=text='UAT-001 Login valid':x=20:y=20:fontsiz
 #   file 'UAT-002-captioned.mp4'
 # (clips must share the same codec and resolution)
 ffmpeg -f concat -safe 0 -i clips.txt -c copy uat-reel.mp4
+```
+
+## 9b. Audio and narration (open source)
+
+The same scenarios can produce narrated videos. There are four ways to add audio, depending on what you want.
+
+### Option 1: Scripted narration (most repeatable)
+
+Add a `Narration:` line to each step in the scenario file (template below). A local text-to-speech engine (Piper or Kokoro) turns those lines into audio clips, and ffmpeg places them over the video. Nothing is re-recorded when you rerun a test.
+
+- **Piper:** fast, runs on a CPU, GPL-3.0-or-later. Using it to generate speech is free; the GPL only matters if you distribute modified Piper source code.
+- **Kokoro:** Apache-2.0, better sound quality, heavier.
+- Neither clones a voice from a short sample.
+- Check the license of each voice model you download.
+- TTS APIs change between versions. Have Claude Code check the installed version's docs when it writes the narration script.
+
+**Syncing audio to video is the hard part.**
+
+Web: have each Playwright spec log a timestamp at every step.
+
+```ts
+const t0 = Date.now();
+const marks: { label: string; ms: number }[] = [];
+const mark = (label: string) => marks.push({ label, ms: Date.now() - t0 });
+// call mark('Step 2: enter credentials') before each step,
+// then write marks to evidence/UAT-001.timeline.json at the end
+```
+
+A small script then reads the timeline, generates one clip per step, and places each at its timestamp:
+
+```bash
+# Place two clips at 1.5s and 6.2s, then mix them
+# (normalize=0 needs ffmpeg ~5.1 or newer)
+ffmpeg -i s1.wav -i s2.wav -filter_complex \
+"[0]adelay=1500|1500[a0];[1]adelay=6200|6200[a1];[a0][a1]amix=inputs=2:normalize=0[a]" \
+-map "[a]" narration.wav
+
+# Attach the narration to the video
+ffmpeg -i UAT-001.mp4 -i narration.wav -c:v copy -c:a aac -shortest UAT-001-narrated.mp4
+```
+
+Flutter / React Native: Maestro has no easy built-in timestamp hook. Options:
+
+- Split each scenario into one small flow per step and run them from a shell script that records the time before each one.
+- Or use a single narration track for the whole scenario.
+
+### Option 2: Live voiceover by you
+
+OBS Studio can capture your microphone and the screen together. It sounds the most natural and needs no TTS, but every recording is manual. Best for demo reels rather than scripted proof runs.
+
+### Option 3: Capture the app's own sound
+
+- **Android (scrcpy):** audio forwarding is on by default for Android 11 and above, and recording a device also records its audio.
+  - Android 12+: works out of the box.
+  - Android 11: the screen must be unlocked when scrcpy starts.
+  - Android 10 or older: audio cannot be captured.
+  - Android 13+ apps can opt out of playback capture.
+  - Use `--no-audio` to switch it off. Example: `scrcpy --record evidence/UAT-001-mobile.mkv --show-touches`
+  - The device microphone can be captured instead with `--audio-source=mic`.
+- **Web / desktop:** OBS can capture desktop audio. As far as I know, Playwright's own video has no audio track.
+- **Narrating a phone live:** scrcpy's mic option records the phone's microphone, not yours. To record your voice while mirroring, capture the scrcpy window and your mic in OBS, or add narration afterwards with ffmpeg.
+
+### Option 4: Captions instead of audio (simplest)
+
+Burned-in captions generated from the same scenario text (see the `drawtext` example in section 9) work for reviewers who watch on mute and are less likely to drift out of sync.
+
+### Suggested order
+
+1. Captions first.
+2. Piper narration for web, where timestamps are easy.
+3. For mobile: record with scrcpy (with its audio), then add one narration track per scenario afterwards.
+
+### Scenario template with narration lines
+
+```markdown
+## UAT-001: Login with valid credentials
+- Platforms: web, mobile
+- Preconditions: test account exists (credentials in env vars UAT_USER / UAT_PASS)
+- Steps:
+  1. Open the app
+     - Narration: "We open the application on the login screen."
+  2. Enter email and password
+     - Narration: "We enter the test account's email and password."
+  3. Tap/click "Log in"
+     - Narration: "We submit the form."
+- Expected:
+  - Dashboard is shown
+  - Text "Welcome" is visible
+  - Narration: "The dashboard loads and shows the welcome message. UAT-001 passes."
+- Evidence: 1 video + screenshot of dashboard
+```
+
+Caution: narration is built from the script text, so keep real client or patient data out of it. Also, the final "passes" line should only be in the finished video if the assertions actually passed. Generate it after the run, from the real result.
+
+### Prompt addition for Claude Code
+
+```text
+Also: for each scenario, write evidence/<ID>.timeline.json with a timestamp
+(ms since recording started) at the start of every step. Then write
+scripts/narrate.* that reads uat/scenarios.md, generates one TTS clip per
+Narration line with Piper, places each clip at its timestamp with ffmpeg,
+and muxes the result into the scenario's video. Only add the final "passes"
+line if the test run actually passed. Check the installed Piper version's
+docs for the correct API.
 ```
 
 ## 10. Scenario template: `uat/scenarios.md`
@@ -254,3 +366,7 @@ maestro test -e UAT_USER=... -e UAT_PASS=... flows/UAT-001.yaml
 - [ ] Generate the first scenario, run it, and review the video.
 - [ ] Decide where evidence is stored (repo folder, shared drive, UAT sign-off pack).
 - [ ] Optional: try Marionette MCP for exploratory sessions after the scripted flows work.
+- [ ] Audio: decide between captions only, scripted Piper narration, or live voiceover (section 9b).
+- [ ] Audio: check the license of the Piper/Kokoro voice model you pick.
+- [ ] Audio: on Android, confirm the test device runs Android 11+ if you want scrcpy to capture app sound.
+- [ ] Audio: for mobile narration, decide between per-step flows (precise timing) and one narration track per scenario.

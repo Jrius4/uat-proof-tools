@@ -1,0 +1,7 @@
+{
+  "name": "uat-proof",
+  "version": "0.1.0",
+  "description": "Turn UAT/QA scenarios into easy-to-watch proof videos with narration and subtitles. Claude writes scenarios and test drivers; a deterministic local engine records, narrates and renders.",
+  "author": { "name": "Julius Kazibwe" },
+  "keywords": ["uat", "qa", "playwright", "maestro", "video", "narration", "subtitles"]
+}

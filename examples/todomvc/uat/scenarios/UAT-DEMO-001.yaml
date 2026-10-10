@@ -1,0 +1,34 @@
+id: UAT-DEMO-001
+title: Add and complete a to-do
+proves: A user can add a task to their list and tick it off when it is done.
+platforms: [web]
+targets:
+  web:
+    baseUrl: https://demo.playwright.dev/todomvc/
+preconditions:
+  - The to-do list starts empty.
+steps:
+  - id: s1
+    do: Open the to-do app
+    narration: We open the to-do app. The list is empty.
+    caption: Open the app
+  - id: s2
+    do: Type "Book flights" and press Enter
+    narration: We type a new task, book flights, and press Enter.
+    caption: Add a task
+  - id: s3
+    do: Tick the checkbox next to "Book flights"
+    narration: Now we tick the box to mark the task as done.
+    caption: Mark it done
+expect:
+  - id: e1
+    check: The list shows "Book flights" as completed
+    narration: The task appears in the list and is crossed out as completed.
+    caption: Task shown as completed
+  - id: e2
+    check: The counter says "0 items left"
+    narration: The counter now says zero items left.
+    caption: Counter shows 0 items left
+outro:
+  pass: The task was added and completed as expected. This check passed.
+  fail: This check did not pass. The QA report lists what went wrong.

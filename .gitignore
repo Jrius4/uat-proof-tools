@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+# Recordings are large and may contain client data; commit deliberately, not by accident.
+evidence/
+examples/**/evidence/
+# Machine-local re-export written by `uatp init`
+**/tests/uat/_uat.ts
