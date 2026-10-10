@@ -38,7 +38,7 @@ The closing line and PASSED/NOT PASSED come from `result.json`. A failed check i
 
 ## TTS engines
 
-`say` (macOS, default). Piper is wired but untested here: install Piper and a voice, then `tts: { engine: piper, piperModel: /path/voice.onnx }`. **Check each voice model's licence** before distributing videos. Neither engine clones a voice.
+`say` (macOS, default). Piper is verified (piper-tts 1.8.0 on Python 3.12, installed under a short path; see the README for setup): `tts: { engine: piper, piperModel: /path/voice.onnx }`. **Check each voice model's licence** before distributing videos. Neither engine clones a voice.
 
 ## Why captions are images
 

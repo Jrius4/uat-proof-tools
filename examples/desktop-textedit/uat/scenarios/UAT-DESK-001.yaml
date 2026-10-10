@@ -1,0 +1,24 @@
+id: UAT-DESK-001
+title: Write a note in TextEdit
+proves: A user can open a new document and type a note that is saved in the document.
+platforms: [desktop]
+targets:
+  desktop:
+    command: sh drive.sh
+steps:
+  - id: s1
+    do: Open TextEdit with a new document
+    narration: We open TextEdit with a new, empty document.
+    caption: Open a new document
+  - id: s2
+    do: Type the note
+    narration: We type a short note.
+    caption: Type a note
+expect:
+  - id: e1
+    check: The document contains the note
+    narration: The note now appears in the document.
+    caption: Note is in the document
+outro:
+  pass: The note was written as expected. This check passed.
+  fail: This check did not pass. The QA report lists what went wrong.
