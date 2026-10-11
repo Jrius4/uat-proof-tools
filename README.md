@@ -109,7 +109,7 @@ Verified on this machine (macOS, Node 24, ffmpeg 9.0.2, Playwright 1.59.1):
 - **Web, end to end** against the TodoMVC demo: record → both profiles → frames inspected (title, captions, banners, end card), speech aligned to subtitle cues within ~100 ms, soft subtitle track, chapters, 48 kHz AAC.
 - **Android, end to end on a real emulator** (Android 17, 1080×2424; Maestro 2.11.0, scrcpy 5.0.1): the stock Settings app, [examples/android-settings](examples/android-settings). Real Maestro `commands.json` parsed (labels, start times, statuses), real scrcpy recording started and finalised on SIGINT, frames at each marker match the timeline, portrait layout and captions render correctly at full resolution. The run found and fixed two real bugs (see below).
 - **iOS Simulator, end to end** (iPhone 16, iOS 18.3; Maestro 2.11.0, `simctl`): the stock Settings app, [examples/ios-settings](examples/ios-settings). Frames checked against the timeline and the tap ring lands on the tapped row. Also surfaced a renderer bug (below).
-- **Piper TTS** (piper-tts 1.8.0, voice en_US-lessac-medium): the web demo rendered end to end with Piper instead of `say`; speech lines up with the subtitle cues within ~0.1 s. I could not judge how it sounds, so listen before you rely on it. Setup notes below.
+- **Piper TTS** (piper-tts 1.8.0, voice en_US-lessac-medium): the web demo and the Android emulator example ([examples/android-settings](examples/android-settings)) both rendered end to end with Piper instead of `say`. On Android the audio track has real speech (checked with ffmpeg level and silence detection) and each speech burst starts where its subtitle cue starts, within ~0.1 s. Neither run has been judged by ear, so listen before you rely on it. Setup notes below.
 - **Failure path**: a deliberately wrong expectation produced a red banner, corrected narration, NOT PASSED end card, and exit code 2.
 - 29 unit tests (`npm test --prefix engine`): pacing plan, subtitle cueing, scenario validation, Maestro parsing and tap extraction.
 - Plugin manifest passes `claude plugin validate`.
@@ -142,7 +142,8 @@ python3.12 -m venv ~/piper-venv            # not 3.15: onnxruntime has no wheels
 ~/piper-venv/bin/pip install piper-tts
 ~/piper-venv/bin/python -m piper.download_voices en_US-lessac-medium --data-dir ~/piper-voices
 export PATH=~/piper-venv/bin:$PATH
-# uatp.config.yaml:  tts: { engine: piper, piperModel: ~/piper-voices/en_US-lessac-medium.onnx }
+# uatp.config.yaml:  tts: { engine: piper, piperModel: /Users/you/piper-voices/en_US-lessac-medium.onnx }
+#                    (use the absolute path: `~` is not expanded)
 ```
 
 Install it under a **short path**: espeak-ng, which Piper uses, keeps its data path in a ~160-character buffer, and a deeper install fails with a confusing "phontab: No such file" error (the adapter now says so).
