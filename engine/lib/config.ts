@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
+import { expandHome } from './tts/piper.ts';
 
 export type ProfileName = 'stakeholder' | 'qa';
 
@@ -45,7 +46,7 @@ export const DEFAULTS: Omit<Config, 'projectDir'> = {
   evidenceDir: 'evidence',
   testsDir: 'tests/uat',
   flowsDir: 'flows/uat',
-  tts: { engine: 'say', voice: 'Samantha', rate: 165 },
+  tts: { engine: 'piper', voice: 'Samantha', rate: 165 },
   render: { fps: 30, maxWidth: 1920, crf: 20, tapShowMs: 800 },
   tapLagMs: { android: 650, ios: 300 },
   syncOffsetMs: { web: 0, android: 0, ios: 0, desktop: 0 },
@@ -96,5 +97,7 @@ export function loadConfig(projectDir: string): Config {
   const dir = resolve(projectDir);
   const file = ['uatp.config.yaml', 'uatp.config.yml'].map((f) => join(dir, f)).find(existsSync);
   const user = file ? parse(readFileSync(file, 'utf8')) ?? {} : {};
-  return { ...(deepMerge(DEFAULTS, user) as Omit<Config, 'projectDir'>), projectDir: dir };
+  const cfg = { ...(deepMerge(DEFAULTS, user) as Omit<Config, 'projectDir'>), projectDir: dir };
+  if (cfg.tts.piperModel) cfg.tts = { ...cfg.tts, piperModel: expandHome(cfg.tts.piperModel) };
+  return cfg;
 }

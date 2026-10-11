@@ -6,12 +6,14 @@ testsDir: tests/uat          # Playwright specs: <ID>.spec.ts
 flowsDir: flows/uat          # Maestro flows: <ID>.yaml or <ID>.<platform>.yaml
 evidenceDir: evidence
 
-# Narration voice. `say` is built into macOS: list voices with `say -v '?'`.
+# Narration voice. Piper (open source, any OS) is the default. `uatp init` fills in piperModel when it finds a
+# voice in ~/piper-voices, in $UATP_PIPER_MODEL or via `uatp init --piper-model <path>`. Setup: see the README.
+# `piper` must be on PATH. Switch to engine: say for the macOS built-in voice (list voices with `say -v '?'`).
 tts:
-  engine: say                # say | piper
-  voice: Samantha
-  rate: 165                  # words per minute; 150-175 is easy to follow
-  # piperModel: /path/to/en_US-voice.onnx   (when engine: piper)
+  engine: piper              # piper | say
+  piperModel: /path/to/en_US-voice.onnx   # absolute path to the voice .onnx (a leading ~/ also works)
+  voice: Samantha            # say only
+  rate: 165                  # say only: words per minute; 150-175 is easy to follow
 
 render:
   fps: 30
