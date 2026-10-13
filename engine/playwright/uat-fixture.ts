@@ -9,11 +9,34 @@
  *
  * Writes raw.webm, timeline.json, result.json (and trace.zip) into $UATP_OUT_DIR.
  */
-import { test as base, expect } from '@playwright/test';
+import { test as playwrightTest, expect, type Browser, type BrowserContext } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 export { expect };
+
+/**
+ * UAT_CDP_URL (e.g. http://127.0.0.1:9222) attaches the run to a Chrome that is already running with
+ * --remote-debugging-port. The default context is that Chrome's own profile, so its sign-in is used and
+ * no storage file is needed. That context is never closed: closing it would close the person's windows.
+ * Without UAT_CDP_URL, Playwright launches its own browser as usual.
+ */
+const base: typeof playwrightTest = process.env.UAT_CDP_URL
+  ? playwrightTest.extend<{}, { browser: Browser }>({
+      browser: [
+        async ({ playwright }, use) => {
+          // Never closed by us: closing a CDP-connected browser would close the attached Chrome's windows.
+          const browser = await playwright.chromium.connectOverCDP(process.env.UAT_CDP_URL!);
+          await use(browser);
+        },
+        { scope: 'worker' },
+      ],
+      context: async ({ browser }, use) => {
+        const context: BrowserContext = browser.contexts()[0] ?? (await browser.newContext());
+        await use(context);
+      },
+    })
+  : playwrightTest;
 
 type Item = { id: string; passed: boolean; error?: string };
 
