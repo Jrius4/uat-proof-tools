@@ -15,6 +15,8 @@ export default defineConfig({
   use: {
     headless: process.env.UATP_HEADED !== '1',
     viewport: { width: w, height: h },
+    // Render at high pixel density so text stays sharp; the renderer scales down to the output size.
+    deviceScaleFactor: Number(process.env.UATP_DSF ?? 2),
     baseURL: process.env.BASE_URL,
   },
 });

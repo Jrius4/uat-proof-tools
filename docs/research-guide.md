@@ -81,7 +81,7 @@ Playwright traces capture DOM snapshots, network and console activity, which a v
 ### Limits
 
 - Records the browser viewport only, not the whole OS.
-- Output is `.webm`; convert to MP4 for sharing (see section 9).
+- Output is `.webm` (VP8 at 1 Mbit/s in 1.59, which makes text soft); convert to MP4 for sharing (see section 9). uat-proof records through Chrome's own screencast instead, for sharp, lossless frames.
 - A Flutter **web** build draws to a canvas, so element targeting is harder than for normal HTML. Treat it as a mobile-style problem, not a Playwright-friendly one.
 
 ## 7. Flutter and React Native
@@ -109,7 +109,7 @@ Neither Maestro nor scrcpy adds chapter titles or highlights like Playwright's s
 
 | Platform | Driver | Recorder |
 |---|---|---|
-| Web | Playwright specs | Playwright screencast (`.webm`) |
+| Web | Playwright specs | Chrome screencast over CDP (lossless `.mp4`) |
 | Flutter | Maestro flows (Patrol optional) | `scrcpy --record` |
 | React Native | Maestro flows | `scrcpy --record` |
 | Finishing | n/a | ffmpeg |

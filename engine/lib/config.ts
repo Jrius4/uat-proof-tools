@@ -31,7 +31,10 @@ export type Config = {
   testsDir: string;
   flowsDir: string;
   tts: { engine: 'say' | 'piper'; voice: string; rate: number; piperModel?: string };
-  render: { fps: number; maxWidth: number; crf: number; tapShowMs: number };
+  /** `crf` and `preset` are libx264's: lower CRF is sharper and larger; slower presets are smaller at the same quality. */
+  render: { fps: number; maxWidth: number; crf: number; preset: string; tapShowMs: number };
+  /** How sharp the raw recording is before rendering. */
+  capture: { web: { deviceScaleFactor: number; jpegQuality: number }; android: { bitRate: string } };
   /** Delay between Maestro logging a tap and the touch landing, per platform. Measured on slow emulators; tune if rings look early or late. */
   tapLagMs: Record<string, number>;
   /** Added to every timeline offset; calibrate if narration lands early/late. */
@@ -47,7 +50,8 @@ export const DEFAULTS: Omit<Config, 'projectDir'> = {
   testsDir: 'tests/uat',
   flowsDir: 'flows/uat',
   tts: { engine: 'piper', voice: 'Samantha', rate: 165 },
-  render: { fps: 30, maxWidth: 1920, crf: 20, tapShowMs: 800 },
+  render: { fps: 30, maxWidth: 1920, crf: 18, preset: 'slow', tapShowMs: 800 },
+  capture: { web: { deviceScaleFactor: 2, jpegQuality: 100 }, android: { bitRate: '16M' } },
   tapLagMs: { android: 650, ios: 300 },
   syncOffsetMs: { web: 0, android: 0, ios: 0, desktop: 0 },
   devices: {},

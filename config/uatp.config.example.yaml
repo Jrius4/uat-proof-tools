@@ -17,8 +17,17 @@ tts:
 
 render:
   fps: 30
-  maxWidth: 1920
-  crf: 20
+  maxWidth: 1920             # output width cap; 2560 keeps a 2x web capture at full sharpness
+  crf: 18                    # x264 quality: lower is sharper and larger (16-23 is sensible)
+  preset: slow               # x264 speed: slower makes smaller files at the same quality
+
+# How sharp the raw recording is before rendering.
+capture:
+  web:
+    deviceScaleFactor: 2     # render the page at 2x pixel density, like a Retina screen
+    jpegQuality: 100         # quality of each frame Chrome hands to the recorder
+  android:
+    bitRate: 16M             # scrcpy video bit rate
 
 # Calibrate if narration lands slightly early (+) or late (-) against the action. Milliseconds.
 syncOffsetMs: { web: 0, android: 0, ios: 0, desktop: 0 }

@@ -29,13 +29,13 @@ test('UAT-001: Sign in with a valid account', async ({ page, uat }) => {
 
 ## What the fixture does
 
-- Starts `page.screencast` (video → `raw.webm`), `showActions` (click highlights), then a trace (`trace.zip`).
+- Records the page through Chrome's own screencast at 2x pixel density (video → `raw.mp4`, lossless, constant frame rate), turns on `showActions` (click highlights), then starts a trace (`trace.zip`, DOM snapshots without screenshots).
 - `uat.step` / `uat.check` record the start time, run your function, wait `holdMs` (default 600 ms steps, 900 ms checks), mark the item passed/failed, and screenshot on failure.
 - When a step or check throws, the test stops; later items are reported "not run".
 
 ## Gotchas
 
-- **Order matters** inside the fixture: tracing screenshots started *before* the screencast shrink the video to an 800×450 corner. Don't start tracing yourself.
+- Don't start tracing or `page.screencast` yourself: the fixture already records, and trace screenshots slow the recording to about 5 fps.
 - Playwright 1.60+ adds richer `showActions` options (cursor, style); the fixture tries them and falls back on 1.59.
 - Credential fields: password inputs render as dots, but plain text inputs show typed values in the video. Use dedicated test accounts.
 - Flutter **web** renders to canvas; role/text locators will not work. Treat it as a mobile-style problem.

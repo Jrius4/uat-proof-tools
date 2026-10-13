@@ -79,7 +79,8 @@ function ff(args: string[]) {
  */
 export function constantRate(rawFile: string, outFile: string, durationMs: number, fps: number): string {
   if (existsSync(outFile) && statSync(outFile).mtimeMs >= statSync(rawFile).mtimeMs) return outFile;
-  ff(['-i', rawFile, '-an', '-vf', `fps=${fps},tpad=stop_mode=clone:stop_duration=${sec(durationMs)}`, '-t', sec(durationMs), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-pix_fmt', 'yuv420p', outFile]);
+  // Lossless, so the final render is the only lossy encode after the device's own.
+  ff(['-i', rawFile, '-an', '-vf', `fps=${fps},tpad=stop_mode=clone:stop_duration=${sec(durationMs)}`, '-t', sec(durationMs), '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-pix_fmt', 'yuv420p', outFile]);
   return outFile;
 }
 
@@ -107,7 +108,8 @@ export async function renderProfile(opts: {
   const videoMs = ffprobeDuration(rawFile);
 
   const work = ensureDir(join(dir, 'render', profileName));
-  const source = constantRate(rawFile, join(ensureDir(join(dir, 'render')), 'raw-cfr.mp4'), videoMs, fps);
+  // The web recorder already writes constant-rate frames at the render rate.
+  const source = tl.cfr && tl.fps === fps ? rawFile : constantRate(rawFile, join(ensureDir(join(dir, 'render')), `raw-cfr-lossless-${fps}fps.mp4`), videoMs, fps);
   const ttsCache = ensureDir(join(dir, 'tts'));
   const items = planItems(sc);
   // Never narrate a failed check as if it had succeeded: replace the scripted line with a plain statement of what was expected.
@@ -205,7 +207,7 @@ export async function renderProfile(opts: {
   if (outroClip) cues.push(...cuesFor(outroText, outStart + 300, outroClip.durationMs));
 
   // --- encode pieces ---------------------------------------------------------
-  const vEnc = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(cfg.render.crf), '-pix_fmt', 'yuv420p', '-r', String(fps)];
+  const vEnc = ['-c:v', 'libx264', '-preset', cfg.render.preset, '-crf', String(cfg.render.crf), '-pix_fmt', 'yuv420p', '-r', String(fps)];
   const aEnc = ['-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '1'];
   const pieces: string[] = [];
 
@@ -232,7 +234,7 @@ export async function renderProfile(opts: {
     else args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono');
     const aIdx = 1 + ovs.length;
 
-    let chain = `[0:v]setpts=(PTS-STARTPTS)/${seg.speed.toFixed(4)},fps=${fps},scale=${W}:${H}:force_original_aspect_ratio=decrease,` +
+    let chain = `[0:v]setpts=(PTS-STARTPTS)/${seg.speed.toFixed(4)},fps=${fps},scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos,` +
       `pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,tpad=stop_mode=clone:stop_duration=${sec(seg.freezeMs + 40)}[v0]`;
     let last = 'v0';
     ovs.forEach((o, k) => {

@@ -98,7 +98,7 @@ outro:
 | Pacing | Holds the last frame until speech ends | Tight; long idle waits sped up (≤ 4×) |
 | End card | PASSED / NOT PASSED + one line | Same + failed ids |
 
-Both play in any player (H.264/AAC, MP4, chapter marks). Tune voice, rate and pacing in `uatp.config.yaml` ([example](config/uatp.config.example.yaml)).
+Both play in any player (H.264/AAC, MP4, chapter marks). Web pages are recorded at 2x pixel density and rendered at 1080p. Tune voice, rate, pacing and video quality in `uatp.config.yaml` ([example](config/uatp.config.example.yaml)).
 
 **Honest narration.** If a check fails, its scripted line is replaced by "This did not pass. We expected: …", the banner turns red, and the end card says NOT PASSED. A check that never ran counts as a failure.
 

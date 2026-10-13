@@ -299,7 +299,7 @@ Desktop recording goes through OBS: open OBS with a scene that captures the targ
 | `.vtt`, `.srt`, `.jpg` | Subtitles and thumbnail for each video |
 | `report.md` | Result for each step and check, and links to the videos |
 | `result.json`, `timeline.json` | The source of truth for pass/fail and timing |
-| `raw.*`, `driver.log`, `recorder.log`, `trace.zip` or `junit.xml` | Raw recording and logs, for debugging |
+| `raw.*`, `driver.log`, `recorder.log`, `trace.zip` or `junit.xml` | Raw recording and logs, for debugging. The web trace keeps DOM snapshots but no screenshots, because the video already has them |
 
 `uatp render` never touches the raw recording or re-runs the test, so you can re-render as often as you like to change the voice or pacing.
 
@@ -337,6 +337,25 @@ tts:
 Install Piper under a **short path**: its espeak-ng component fails with "phontab: No such file" if the install path is much over about 160 characters. Check any voice model's licence before distributing videos. Piper has been run end to end on the web demo and the Android emulator example. Neither run was judged by ear, so listen first.
 
 **To use the macOS built-in voice instead,** set `tts.engine: say` in `uatp.config.yaml`. `tts.voice` and `tts.rate` apply to `say` only. List voices with `say -v '?'`, and use a rate of 150 to 175 words per minute. The example projects in this repo are pinned to `say` so they run without Piper.
+
+### Video quality
+
+Web pages are recorded at 2x pixel density (2560×1440 for the default 1280×720 viewport) and scaled down to 1920×1080, so text stays sharp. Each recording is encoded once, losslessly, before the final render, which is the only lossy step. These settings in `uatp.config.yaml` control quality:
+
+```yaml
+render:
+  maxWidth: 1920      # output width cap; 2560 keeps a 2x web capture at full size
+  crf: 18             # lower is sharper and larger; 16-23 is sensible
+  preset: slow        # slower makes smaller files at the same quality (veryfast renders quicker)
+capture:
+  web:
+    deviceScaleFactor: 2   # 1 halves the raw size but makes text soft
+    jpegQuality: 100
+  android:
+    bitRate: 16M           # scrcpy video bit rate
+```
+
+The raw web recording is about 50 MB per minute because it is lossless, and it stays in the evidence folder. iOS Simulator recordings use `simctl`'s own quality, which has no setting. Change `render.*` and run `uatp render` again to apply it to an existing run. `capture.*` applies only to new recordings.
 
 ## 6. Run it at scale
 
