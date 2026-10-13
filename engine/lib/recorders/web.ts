@@ -18,6 +18,9 @@ export async function recordWeb({ cfg, scenario, outDir, headed }: RecordContext
     UATP_SCENARIO_ID: scenario.id,
     UATP_VIEWPORT: vp,
     UATP_HEADED: headed ? '1' : '0',
+    UATP_FPS: String(cfg.render.fps),
+    UATP_DSF: String(cfg.capture.web.deviceScaleFactor),
+    UATP_JPEG_QUALITY: String(cfg.capture.web.jpegQuality),
   };
   if (web.baseUrl && !process.env.BASE_URL) env.BASE_URL = substituteEnv(web.baseUrl);
 

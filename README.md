@@ -25,7 +25,7 @@ sync / legibility / secrets / claim-vs-result check
 
 ## Quick start
 
-Requirements: macOS (the default voice uses `say`), Node ≥ 22.6, ffmpeg with libx264, and per platform: Maestro + Java 17 (mobile), scrcpy + adb (Android), Xcode (iOS Simulator), OBS 28+ (desktop).
+Requirements: macOS, Node ≥ 22.6, ffmpeg with libx264, [Piper](#setting-up-piper) for narration (the default voice; macOS `say` is the alternative), and per platform: Maestro + Java 17 (mobile), scrcpy + adb (Android), Xcode (iOS Simulator), OBS 28+ (desktop).
 
 ```bash
 # one-time: engine dependencies
@@ -98,7 +98,7 @@ outro:
 | Pacing | Holds the last frame until speech ends | Tight; long idle waits sped up (≤ 4×) |
 | End card | PASSED / NOT PASSED + one line | Same + failed ids |
 
-Both play in any player (H.264/AAC, MP4, chapter marks). Tune voice, rate and pacing in `uatp.config.yaml` ([example](config/uatp.config.example.yaml)).
+Both play in any player (H.264/AAC, MP4, chapter marks). Web pages are recorded at 2x pixel density and rendered at 1080p. Tune voice, rate, pacing and video quality in `uatp.config.yaml` ([example](config/uatp.config.example.yaml)).
 
 **Honest narration.** If a check fails, its scripted line is replaced by "This did not pass. We expected: …", the banner turns red, and the end card says NOT PASSED. A check that never ran counts as a failure.
 
@@ -133,8 +133,9 @@ Known limits:
 - Playwright is pinned to **1.59.1** because it matches the browser already cached on this machine; newer versions need `npx playwright install chromium` (a download). 1.59's `showActions` is simpler than 1.62's; the fixture upgrades automatically.
 - Captions are rendered as images because the installed ffmpeg lacks `drawtext`/`libass`.
 - `sensitive: true` keeps secrets out of narration and captions, but it cannot blur text a driver types into a visible field. Use throwaway test accounts and let `uat-reviewer` check frames.
-- Narration defaults to `say` (macOS only). **Piper** works on macOS (below) and is the route to other platforms. Check any voice model's licence before distributing videos: the en_US-lessac voice's card points to the Blizzard 2013 Lessac dataset licence, whose page I could not read terms from, so confirm it yourself.
+- Narration defaults to **Piper**. `uatp init` fills in `tts.piperModel` for you if it finds a voice (below). The macOS `say` voice is the alternative (`tts.engine: say`); the examples in this repo are pinned to `say` so they run without Piper. Piper is the route to non-macOS platforms. Check any voice model's licence before distributing videos: the en_US-lessac voice's card points to the Blizzard 2013 Lessac dataset licence, whose page I could not read terms from, so confirm it yourself.
 
+<a id="setting-up-piper"></a>
 **Setting up Piper** (verified on macOS, Intel):
 
 ```bash
@@ -142,9 +143,10 @@ python3.12 -m venv ~/piper-venv            # not 3.15: onnxruntime has no wheels
 ~/piper-venv/bin/pip install piper-tts
 ~/piper-venv/bin/python -m piper.download_voices en_US-lessac-medium --data-dir ~/piper-voices
 export PATH=~/piper-venv/bin:$PATH
-# uatp.config.yaml:  tts: { engine: piper, piperModel: /Users/you/piper-voices/en_US-lessac-medium.onnx }
-#                    (use the absolute path: `~` is not expanded)
+cd ~/code/my-app && uatp init                # finds ~/piper-voices and writes tts.piperModel into uatp.config.yaml
 ```
+
+`uatp init` picks the voice model in this order: `--piper-model <path>`, then `$UATP_PIPER_MODEL`, then `~/piper-voices` (the preferred `en_US-lessac-medium`, else the first `.onnx` there). It never downloads anything. If it finds none, it leaves a placeholder in `uatp.config.yaml` and prints the install commands; set `tts.piperModel` there yourself (an absolute path, or one starting with `~/`). `init` does not change a config that already exists, so in an existing project edit the file. `piper` itself must be on `PATH`; `uatp doctor` tells you which of the two is missing.
 
 Install it under a **short path**: espeak-ng, which Piper uses, keeps its data path in a ~160-character buffer, and a deeper install fails with a confusing "phontab: No such file" error (the adapter now says so).
 

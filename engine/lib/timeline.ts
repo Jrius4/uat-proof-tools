@@ -13,6 +13,9 @@ export type Timeline = {
   platform: string;
   /** File name of the raw recording, relative to the run directory. */
   video: string;
+  /** True when the raw recording already has one frame every 1/fps seconds, so it needs no re-timing. */
+  cfr?: boolean;
+  fps?: number;
   markers: Marker[];
   /** Tap positions so the renderer can draw a marker (Android's own "show touches" does not fire for Maestro taps). */
   taps?: Tap[];

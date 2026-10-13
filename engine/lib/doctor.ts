@@ -45,7 +45,9 @@ export async function doctor(cfg: Config): Promise<{ checks: Check[]; ok: boolea
     v.code !== 0 ? add('tts (say)', 'fail', 'say not available (macOS only)', 'Set tts.engine: piper') :
       new RegExp(`^${cfg.tts.voice}\\s`, 'm').test(v.stdout) ? add('tts (say)', 'ok', `voice ${cfg.tts.voice}`) : add('tts (say)', 'fail', `voice "${cfg.tts.voice}" not installed`, "Pick one from `say -v '?'` (en_US) and set tts.voice");
   } else {
-    which('piper') && cfg.tts.piperModel && existsSync(cfg.tts.piperModel) ? add('tts (piper)', 'ok', cfg.tts.piperModel) : add('tts (piper)', 'fail', 'piper or model missing', 'Install piper and set tts.piperModel');
+    !which('piper') ? add('tts (piper)', 'fail', 'piper not found on PATH', 'Install piper-tts (python3.12) and put its bin first on PATH, e.g. export PATH=~/piper-venv/bin:$PATH; or set tts.engine: say') :
+      !cfg.tts.piperModel || !existsSync(cfg.tts.piperModel) ? add('tts (piper)', 'fail', `voice model missing${cfg.tts.piperModel ? `: ${cfg.tts.piperModel}` : ' (tts.piperModel not set)'}`, 'Download a voice (see README) and set tts.piperModel in uatp.config.yaml to its absolute path') :
+        add('tts (piper)', 'ok', cfg.tts.piperModel);
   }
 
   // Mobile

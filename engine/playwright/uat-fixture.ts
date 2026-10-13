@@ -7,13 +7,37 @@
  *     await uat.check('e1', 'Welcome is visible', async () => { await expect(page.getByText('Welcome')).toBeVisible(); });
  *   });
  *
- * Writes raw.webm, timeline.json, result.json (and trace.zip) into $UATP_OUT_DIR.
+ * Writes raw.mp4, timeline.json, result.json (and trace.zip) into $UATP_OUT_DIR.
  */
-import { test as base, expect } from '@playwright/test';
+import { test as playwrightTest, expect, type Browser, type BrowserContext } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { startRecording } from './cdp-recorder.ts';
 
 export { expect };
+
+/**
+ * UAT_CDP_URL (e.g. http://127.0.0.1:9222) attaches the run to a Chrome that is already running with
+ * --remote-debugging-port. The default context is that Chrome's own profile, so its sign-in is used and
+ * no storage file is needed. That context is never closed: closing it would close the person's windows.
+ * Without UAT_CDP_URL, Playwright launches its own browser as usual.
+ */
+const base: typeof playwrightTest = process.env.UAT_CDP_URL
+  ? playwrightTest.extend<{}, { browser: Browser }>({
+      browser: [
+        async ({ playwright }, use) => {
+          // Never closed by us: closing a CDP-connected browser would close the attached Chrome's windows.
+          const browser = await playwright.chromium.connectOverCDP(process.env.UAT_CDP_URL!);
+          await use(browser);
+        },
+        { scope: 'worker' },
+      ],
+      context: async ({ browser }, use) => {
+        const context: BrowserContext = browser.contexts()[0] ?? (await browser.newContext());
+        await use(context);
+      },
+    })
+  : playwrightTest;
 
 type Item = { id: string; passed: boolean; error?: string };
 
@@ -36,9 +60,10 @@ export const test = base.extend<{ uat: Uat }>({
 
     const size = page.viewportSize() ?? { width: 1280, height: 720 };
     await page.setViewportSize(size);
-    await page.screencast.start({ path: join(outDir, 'raw.webm'), size });
-    // Order matters: tracing screenshots started before the screencast shrink the video to an 800x450 corner.
-    await context.tracing.start({ screenshots: true, snapshots: true });
+    const fps = Number(process.env.UATP_FPS ?? 30);
+    const recorder = await startRecording(page, context, join(outDir, 'raw.mp4'), { fps, quality: Number(process.env.UATP_JPEG_QUALITY ?? 100) });
+    // No trace screenshots: the video already shows every frame, and trace screenshots throttle the screencast to ~5 fps.
+    await context.tracing.start({ screenshots: false, snapshots: true });
     // Click/typing highlights. Newer Playwright (1.60+) supports a styled cursor; 1.59 only the basic form.
     const screencast = page.screencast as any;
     try {
@@ -55,7 +80,8 @@ export const test = base.extend<{ uat: Uat }>({
     } catch {
       await screencast.showActions({ position: 'top-right', duration: 900, fontSize: 22 });
     }
-    const t0 = Date.now();
+    // Markers are measured from the first video frame.
+    const t0 = recorder.startedAt;
     const startedAt = new Date().toISOString();
     const markers: { id: string; startMs: number }[] = [];
     const items: Item[] = [];
@@ -78,9 +104,9 @@ export const test = base.extend<{ uat: Uat }>({
 
     // Reached only after the test body finished or threw; hold the last frame, then finalize.
     await page.waitForTimeout(1200);
-    await page.screencast.stop();
+    await recorder.stop();
     await context.tracing.stop({ path: join(outDir, 'trace.zip') });
-    writeFileSync(join(outDir, 'timeline.json'), JSON.stringify({ scenarioId, platform: 'web', video: 'raw.webm', markers }, null, 2));
+    writeFileSync(join(outDir, 'timeline.json'), JSON.stringify({ scenarioId, platform: 'web', video: 'raw.mp4', cfr: true, fps, markers }, null, 2));
     // Provisional; `uatp record` completes it against the scenario and the runner's exit status.
     writeFileSync(join(outDir, 'items.json'), JSON.stringify({ startedAt, items }, null, 2));
   },

@@ -85,7 +85,7 @@ export async function recordMobile(ctx: RecordContext, platform: 'android' | 'io
           label: 'scrcpy',
           readyPattern: /Recording started/i,
           // --show-touches draws a circle under each tap so viewers can follow the action.
-          start: (f) => spawnLogged('scrcpy', ['--serial', device!, '--no-window', '--no-audio', '--show-touches', '--record', f, '--record-format', 'mp4']),
+          start: (f) => spawnLogged('scrcpy', ['--serial', device!, '--no-window', '--no-audio', '--show-touches', '--video-bit-rate', cfg.capture.android.bitRate, '--max-fps', String(cfg.render.fps), '--record', f, '--record-format', 'mp4']),
         }
       : {
           label: 'simctl',

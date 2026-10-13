@@ -30,7 +30,7 @@ The closing line and PASSED/NOT PASSED come from `result.json`. A failed check i
 
 ## Tuning (`uatp.config.yaml`, all optional)
 
-- Voice/speed: `tts.voice` (`say -v '?'` lists voices), `tts.rate` (150-175 is easy to follow).
+- Voice/speed (`say` only): `tts.voice` (`say -v '?'` lists voices), `tts.rate` (150-175 is easy to follow). Piper's voice is the model file in `tts.piperModel`.
 - More breathing room: `profiles.stakeholder.breathingMs`, `leadInMs`.
 - Longer title/end cards: `titleCardMs`, `endCardMs`.
 - Sync: `syncOffsetMs.<platform>`.
@@ -38,7 +38,7 @@ The closing line and PASSED/NOT PASSED come from `result.json`. A failed check i
 
 ## TTS engines
 
-`say` (macOS, default). Piper is verified (piper-tts 1.8.0 on Python 3.12, installed under a short path; see the README for setup): `tts: { engine: piper, piperModel: /path/voice.onnx }`. **Check each voice model's licence** before distributing videos. Neither engine clones a voice.
+Piper is the default (piper-tts 1.8.0 on Python 3.12, installed under a short path; see the README for setup). `uatp init` writes `tts.piperModel` when it finds a voice in `~/piper-voices`, `$UATP_PIPER_MODEL` or `--piper-model`; otherwise set `tts: { engine: piper, piperModel: /path/voice.onnx }` yourself. `say` (macOS only) is the alternative: `tts.engine: say`. **Check each voice model's licence** before distributing videos. Neither engine clones a voice.
 
 ## Why captions are images
 

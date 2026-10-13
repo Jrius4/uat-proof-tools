@@ -39,7 +39,7 @@ You install the tool once. You then point it at whichever app you want to test; 
 
 | For | You need |
 |---|---|
-| Everything | macOS (the default voice is the built-in `say`), Node 22.6 or newer, ffmpeg with libx264 |
+| Everything | macOS, Node 22.6 or newer, ffmpeg with libx264, and a narration voice: [Piper](#change-the-voice) (the default) or macOS `say` |
 | Web | Nothing more. The engine pins Playwright 1.59.1 |
 | Android | Maestro, Java 17, scrcpy, adb, an emulator or a phone with USB debugging |
 | iOS Simulator | Maestro, Java 17, Xcode with a booted simulator |
@@ -299,7 +299,7 @@ Desktop recording goes through OBS: open OBS with a scene that captures the targ
 | `.vtt`, `.srt`, `.jpg` | Subtitles and thumbnail for each video |
 | `report.md` | Result for each step and check, and links to the videos |
 | `result.json`, `timeline.json` | The source of truth for pass/fail and timing |
-| `raw.*`, `driver.log`, `recorder.log`, `trace.zip` or `junit.xml` | Raw recording and logs, for debugging |
+| `raw.*`, `driver.log`, `recorder.log`, `trace.zip` or `junit.xml` | Raw recording and logs, for debugging. The web trace keeps DOM snapshots but no screenshots, because the video already has them |
 
 `uatp render` never touches the raw recording or re-runs the test, so you can re-render as often as you like to change the voice or pacing.
 
@@ -309,31 +309,53 @@ Watch the stakeholder video. The `uat-review` skill checks sync, legibility, lea
 
 ### Change the voice
 
-Default is macOS `say`. List voices with `say -v '?'` and set them in `uatp.config.yaml`:
-
-```yaml
-tts:
-  engine: say
-  voice: Samantha
-  rate: 165        # words per minute; 150 to 175 is easy to follow
-```
-
-For an open-source voice that also works off macOS, use Piper:
+**Piper is the default.** It is open source and runs on CPU. Set it up once on your machine:
 
 ```bash
 python3.12 -m venv ~/piper-venv        # not 3.15: onnxruntime has no wheels for it yet
 ~/piper-venv/bin/pip install piper-tts
 ~/piper-venv/bin/python -m piper.download_voices en_US-lessac-medium --data-dir ~/piper-voices
-export PATH=~/piper-venv/bin:$PATH
+export PATH=~/piper-venv/bin:$PATH     # put this in your shell profile; `piper` must be on PATH
 ```
+
+Then `uatp init` in each app project does the config for you. It sets `tts.piperModel` in `uatp.config.yaml` by looking, in order, at:
+
+1. `uatp init --piper-model /path/to/voice.onnx`
+2. the `UATP_PIPER_MODEL` environment variable
+3. `~/piper-voices` (the preferred voice is `en_US-lessac-medium`, otherwise the first `.onnx` there)
+
+It never downloads anything. If it finds no voice it leaves a placeholder path in the config and prints the install commands above. `uatp init` also leaves an existing `uatp.config.yaml` alone, so in a project that already has one, edit the file yourself:
 
 ```yaml
 tts:
   engine: piper
-  piperModel: /Users/you/piper-voices/en_US-lessac-medium.onnx   # absolute path; "~" is not expanded
+  piperModel: /Users/you/piper-voices/en_US-lessac-medium.onnx   # absolute, or starting with ~/
 ```
 
+`uatp doctor` reports whether `piper` is missing from `PATH` or the model file is missing.
+
 Install Piper under a **short path**: its espeak-ng component fails with "phontab: No such file" if the install path is much over about 160 characters. Check any voice model's licence before distributing videos. Piper has been run end to end on the web demo and the Android emulator example. Neither run was judged by ear, so listen first.
+
+**To use the macOS built-in voice instead,** set `tts.engine: say` in `uatp.config.yaml`. `tts.voice` and `tts.rate` apply to `say` only. List voices with `say -v '?'`, and use a rate of 150 to 175 words per minute. The example projects in this repo are pinned to `say` so they run without Piper.
+
+### Video quality
+
+Web pages are recorded at 2x pixel density (2560×1440 for the default 1280×720 viewport) and scaled down to 1920×1080, so text stays sharp. Each recording is encoded once, losslessly, before the final render, which is the only lossy step. These settings in `uatp.config.yaml` control quality:
+
+```yaml
+render:
+  maxWidth: 1920      # output width cap; 2560 keeps a 2x web capture at full size
+  crf: 18             # lower is sharper and larger; 16-23 is sensible
+  preset: slow        # slower makes smaller files at the same quality (veryfast renders quicker)
+capture:
+  web:
+    deviceScaleFactor: 2   # 1 halves the raw size but makes text soft
+    jpegQuality: 100
+  android:
+    bitRate: 16M           # scrcpy video bit rate
+```
+
+The raw web recording is about 50 MB per minute because it is lossless, and it stays in the evidence folder. iOS Simulator recordings use `simctl`'s own quality, which has no setting. Change `render.*` and run `uatp render` again to apply it to an existing run. `capture.*` applies only to new recordings.
 
 ## 6. Run it at scale
 
@@ -364,7 +386,7 @@ To run a subset, glob on the id: `for f in uat/scenarios/UAT-CHECKOUT-*.yaml; do
 
 ### CI
 
-- Web scenarios need the engine's dependencies, ffmpeg with libx264, and Playwright's Chromium (`npx playwright install chromium` inside `engine/`). The default `say` voice only exists on macOS, so a macOS runner works as-is, and a Linux runner needs Piper. **Not tested:** Piper or the whole pipeline on Linux.
+- Web scenarios need the engine's dependencies, ffmpeg with libx264, and Playwright's Chromium (`npx playwright install chromium` inside `engine/`). `say` only exists on macOS. Piper is the default and needs `piper` on `PATH` plus a voice model on the runner, so a CI job has to install both (`uatp init` does not download anything). **Not tested:** Piper or the whole pipeline on Linux.
 - Android and iOS need an emulator or simulator, which means a runner that can host one. **Not tested** in CI.
 - Desktop recording needs a real display and OBS, so it suits a dedicated machine rather than a shared runner.
 - Store `evidence/` as a build artifact. Do not commit it. It is large and can contain client data, which is why it is gitignored.
@@ -386,6 +408,7 @@ The engine lives in one checkout. Each app repo holds its own `uat/`, `tests/uat
 | Symptom | Likely cause and fix |
 |---|---|
 | `uatp: command not found` | There is no global install. Define the `uatp` shell function from section 2 |
+| `doctor` shows `✗ tts (piper)` | `piper` is not on `PATH`, or `tts.piperModel` is missing or wrong. The message says which. Or set `tts.engine: say` |
 | `doctor` shows `✗ playwright chromium` | `npx playwright install chromium` inside `engine/` |
 | A step or check shows "not run" | The id is in the scenario but missing from the driver. Every `s*` and `e*` id must appear in it |
 | Exit `2` with a red banner | The app did not meet an expectation. This is a finding. Do not edit the assertion to make it pass |
