@@ -1,0 +1,47 @@
+# uatp.config.yaml: every key is optional. Defaults shown.
+
+# Where things live, relative to the project root.
+scenariosDir: uat/scenarios
+testsDir: tests/uat          # Playwright specs: <ID>.spec.ts
+flowsDir: flows/uat          # Maestro flows: <ID>.yaml or <ID>.<platform>.yaml
+evidenceDir: evidence
+
+# Narration voice. Piper (open source, any OS) is the default. `uatp init` fills in piperModel when it finds a
+# voice in ~/piper-voices, in $UATP_PIPER_MODEL or via `uatp init --piper-model <path>`. Setup: see the README.
+# `piper` must be on PATH. Switch to engine: say for the macOS built-in voice (list voices with `say -v '?'`).
+tts:
+  engine: piper              # piper | say
+  piperModel: /Users/juliusjuniorkazibwe/piper-voices/en_US-lessac-medium.onnx
+  voice: Samantha            # say only
+  rate: 165                  # say only: words per minute; 150-175 is easy to follow
+
+render:
+  fps: 30
+  maxWidth: 1920             # output width cap; 2560 keeps a 2x web capture at full sharpness
+  crf: 18                    # x264 quality: lower is sharper and larger (16-23 is sensible)
+  preset: slow               # x264 speed: slower makes smaller files at the same quality
+
+# How sharp the raw recording is before rendering.
+capture:
+  web:
+    deviceScaleFactor: 2     # render the page at 2x pixel density, like a Retina screen
+    jpegQuality: 100         # quality of each frame Chrome hands to the recorder
+  android:
+    bitRate: 16M             # scrcpy video bit rate
+
+# Calibrate if narration lands slightly early (+) or late (-) against the action. Milliseconds.
+syncOffsetMs: { web: 0, android: 0, ios: 0, desktop: 0 }
+
+# Pin devices when several are connected.
+devices: {}
+#  android: emulator-5554
+#  ios: 00000000-0000-0000-0000-000000000000
+
+obs:
+  host: 127.0.0.1
+  port: 4455
+  passwordEnv: OBS_WS_PASSWORD   # name of the env var holding the OBS WebSocket password
+
+# Override any profile field, e.g. make stakeholder videos slower:
+# profiles:
+#   stakeholder: { breathingMs: 900 }
