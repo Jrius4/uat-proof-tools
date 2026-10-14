@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in uatp, a skill or an agent doesn't work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest scenario or command that shows it. The TodoMVC example is a good base.
+      placeholder: |
+        1. cd examples/todomvc
+        2. node ../../engine/bin/uatp.ts all UAT-DEMO-001 -p web
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options: [Web, Android, iOS Simulator, Desktop (OBS), Not platform-specific]
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`uatp doctor` output"
+      description: Paste the output. Remove anything private first.
+      render: text
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS and version, Node version, ffmpeg version, voice engine (Piper or say).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Don't attach recordings that show real client data or credentials.

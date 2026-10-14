@@ -161,3 +161,11 @@ config/   uatp.config.example.yaml
 examples/ todomvc (web) · android-settings (Android emulator) · ios-settings (iOS Simulator)
 docs/     research-guide.md (the tool survey that led here)
 ```
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests and how changes reach `main`. Please report security issues privately as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)
