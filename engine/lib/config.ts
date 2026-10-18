@@ -30,7 +30,7 @@ export type Config = {
   evidenceDir: string;
   testsDir: string;
   flowsDir: string;
-  tts: { engine: 'say' | 'piper'; voice: string; rate: number; piperModel?: string };
+  tts: { engine: 'say' | 'piper'; voice: string; rate: number; piperModel?: string; piperSpeaker?: string | number };
   /** `crf` and `preset` are libx264's: lower CRF is sharper and larger; slower presets are smaller at the same quality. */
   render: { fps: number; maxWidth: number; crf: number; preset: string; tapShowMs: number };
   /** How sharp the raw recording is before rendering. */

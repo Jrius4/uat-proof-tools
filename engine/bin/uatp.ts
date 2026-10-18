@@ -15,7 +15,7 @@ import { writeReport } from '../lib/report.ts';
 import { recordWeb } from '../lib/recorders/web.ts';
 import { recordAndroid, recordIos } from '../lib/recorders/mobile.ts';
 import { recordDesktop } from '../lib/recorders/obs.ts';
-import { applyPiperModel, findPiperModel } from '../lib/tts/piper.ts';
+import { applyPiperModel, expandHome, findPiperModel } from '../lib/tts/piper.ts';
 import { parse as parseYaml } from 'yaml';
 import { readFileSync } from 'node:fs';
 
@@ -31,6 +31,7 @@ const HELP = `uatp: record UAT/QA proof videos with narration and subtitles
   uatp mark <step-id> [--fail "why"]   (desktop drivers) timestamp the start of a step
 
 Options: -p/--platform, --run <runId>, --profile, --headed, --project <dir> (default: cwd)
+         --piper-model <path> / --piper-speaker <name|id>  narrate this run with another Piper voice (render, all)
 `;
 
 const PIPER_SETUP_HINT = `  narration: Piper is the default but no voice model was found. Set it up once (see README), then set tts.piperModel in uatp.config.yaml
@@ -109,6 +110,11 @@ async function main() {
   const [cmd, ...rest] = a._;
   if (!cmd || cmd === 'help' || a.flags.help) return void console.log(HELP);
   const cfg = loadConfig((a.flags.project as string) ?? process.cwd());
+  if (cmd !== 'init' && (typeof a.flags['piper-model'] === 'string' || typeof a.flags['piper-speaker'] === 'string')) {
+    cfg.tts = { ...cfg.tts, engine: 'piper' };
+    if (typeof a.flags['piper-model'] === 'string') cfg.tts.piperModel = expandHome(a.flags['piper-model']);
+    if (typeof a.flags['piper-speaker'] === 'string') cfg.tts.piperSpeaker = a.flags['piper-speaker'];
+  }
 
   switch (cmd) {
     case 'doctor': {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { applyPiperModel, expandHome, findPiperModel } from '../lib/tts/piper.ts';
+import { applyPiperModel, expandHome, findPiperModel, resolvePiperSpeaker } from '../lib/tts/piper.ts';
 import { DEFAULTS, loadConfig } from '../lib/config.ts';
 
 const home = () => mkdtempSync(join(tmpdir(), 'uatp-home-'));
@@ -59,4 +59,17 @@ test('~ in piperModel is expanded when the config loads', () => {
   const cfg = loadConfig(dir);
   assert.ok(!cfg.tts.piperModel!.startsWith('~'));
   assert.ok(cfg.tts.piperModel!.endsWith('/v/y.onnx'));
+});
+
+test('resolvePiperSpeaker passes ids through and maps names via speaker_id_map', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'uatp-spk-'));
+  const model = join(dir, 'multi.onnx');
+  writeFileSync(`${model}.json`, JSON.stringify({ speaker_id_map: { p336: 51, p347: 32 } }));
+  assert.equal(resolvePiperSpeaker(model, 7), 7);
+  assert.equal(resolvePiperSpeaker(model, '12'), 12);
+  assert.equal(resolvePiperSpeaker(model, 'p347'), 32);
+  assert.throws(() => resolvePiperSpeaker(model, 'nobody'), /Unknown speaker "nobody".*p336/);
+  const single = join(dir, 'single.onnx');
+  writeFileSync(`${single}.json`, JSON.stringify({}));
+  assert.throws(() => resolvePiperSpeaker(single, 'p1'), /single-speaker/);
 });

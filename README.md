@@ -148,6 +148,8 @@ cd ~/code/my-app && uatp init                # finds ~/piper-voices and writes t
 
 `uatp init` picks the voice model in this order: `--piper-model <path>`, then `$UATP_PIPER_MODEL`, then `~/piper-voices` (the preferred `en_US-lessac-medium`, else the first `.onnx` there). It never downloads anything. If it finds none, it leaves a placeholder in `uatp.config.yaml` and prints the install commands; set `tts.piperModel` there yourself (an absolute path, or one starting with `~/`). `init` does not change a config that already exists, so in an existing project edit the file. `piper` itself must be on `PATH`; `uatp doctor` tells you which of the two is missing.
 
+More voices: [docs/voices.md](docs/voices.md) lists ten curated English voices (5 female, 5 male, including calm and South African ones), with a download script, speaker selection for multi-speaker models and a script that renders a sample video per voice.
+
 Install it under a **short path**: espeak-ng, which Piper uses, keeps its data path in a ~160-character buffer, and a deeper install fails with a confusing "phontab: No such file" error (the adapter now says so).
 
 ## Layout

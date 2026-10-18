@@ -17,7 +17,7 @@ export function speak(cfg: Config, text: string, cacheDir: string): Clip {
   const engine = ENGINES[cfg.tts.engine];
   if (!engine) throw new Error(`Unknown tts.engine "${cfg.tts.engine}". Use one of: ${Object.keys(ENGINES).join(', ')}`);
   ensureDir(cacheDir);
-  const key = sha(cfg.tts.engine, cfg.tts.voice, String(cfg.tts.rate), cfg.tts.piperModel ?? '', text);
+  const key = sha(cfg.tts.engine, cfg.tts.voice, String(cfg.tts.rate), cfg.tts.piperModel ?? '', String(cfg.tts.piperSpeaker ?? ''), text);
   const file = join(cacheDir, `${key}.wav`);
   if (!existsSync(file)) engine(cfg, text, file);
   return { file, durationMs: ffprobeDuration(file) };

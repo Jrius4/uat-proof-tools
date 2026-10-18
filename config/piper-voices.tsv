@@ -1,0 +1,11 @@
+label	model	speaker	gender	character	license
+kristin	en_US-kristin-medium	-	F	calm, relaxing (audiobook)	public domain
+cori	en_GB-cori-high	-	F	warm British audiobook	public domain
+ljspeech	en_US-ljspeech-high	-	F	clear, neutral US	public domain
+alba	en_GB-alba-medium	-	F	Scottish	CC BY 4.0
+sa-female	en_GB-vctk-medium	p336	F	South African	CC BY 4.0
+norman	en_US-norman-medium	-	M	calm, deep, relaxing (audiobook)	public domain
+john	en_US-john-medium	-	M	warm US narrator	public domain
+joe	en_US-joe-medium	-	M	plain US	CC0
+northern	en_GB-northern_english_male-medium	-	M	Northern English	CC BY-SA 4.0
+sa-male	en_GB-vctk-medium	p347	M	South African	CC BY 4.0
