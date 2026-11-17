@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { runOrThrow, which } from '../util.ts';
@@ -43,12 +43,32 @@ export function applyPiperModel(template: string, model: string): string {
   return template.replace(/^(\s*)#?\s*piperModel:.*$/m, (_m, indent) => `${indent}piperModel: ${value}`);
 }
 
+/**
+ * Turn a speaker setting into the numeric id Piper's `--speaker` takes. Numbers (and numeric strings) pass through;
+ * names such as `p347` are looked up in the model's `speaker_id_map` (`<model>.onnx.json`).
+ */
+export function resolvePiperSpeaker(model: string, speaker: string | number): number {
+  if (typeof speaker === 'number') return speaker;
+  if (/^\d+$/.test(speaker)) return Number(speaker);
+  const cfgFile = `${model}.json`;
+  if (!existsSync(cfgFile)) throw new Error(`Cannot resolve speaker "${speaker}": ${cfgFile} does not exist`);
+  const map: Record<string, number> = JSON.parse(readFileSync(cfgFile, 'utf8')).speaker_id_map ?? {};
+  if (!(speaker in map)) {
+    const names = Object.keys(map);
+    throw new Error(names.length
+      ? `Unknown speaker "${speaker}" for ${model}. Some valid names: ${names.slice(0, 8).join(', ')}${names.length > 8 ? ', ...' : ''}`
+      : `${model} is a single-speaker voice; remove tts.piperSpeaker`);
+  }
+  return map[speaker];
+}
+
 export function synthPiper(cfg: Config, text: string, outFile: string): void {
   if (!which('piper')) throw new Error('piper not found on PATH. Install it or set tts.engine: say');
   if (!cfg.tts.piperModel) throw new Error('tts.piperModel is required when tts.engine is piper');
   const raw = outFile.replace(/\.wav$/, '.piper.wav');
   try {
-    runOrThrow('piper', ['--model', cfg.tts.piperModel, '--output_file', raw], { input: text });
+    const speaker = cfg.tts.piperSpeaker === undefined ? [] : ['--speaker', String(resolvePiperSpeaker(cfg.tts.piperModel, cfg.tts.piperSpeaker))];
+    runOrThrow('piper', ['--model', cfg.tts.piperModel, ...speaker, '--output_file', raw], { input: text });
   } catch (e) {
     // espeak-ng keeps its data path in a ~160-byte buffer; a deep install path is cut short and "phontab" goes missing.
     if (/phontab/.test(String(e))) {

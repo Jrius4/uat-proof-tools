@@ -12,6 +12,7 @@ evidenceDir: evidence
 tts:
   engine: piper              # piper | say
   piperModel: /path/to/en_US-voice.onnx   # absolute path to the voice .onnx (a leading ~/ also works)
+  # piperSpeaker: p347       # multi-speaker models only (e.g. en_GB-vctk-medium): speaker name or numeric id
   voice: Samantha            # say only
   rate: 165                  # say only: words per minute; 150-175 is easy to follow
 

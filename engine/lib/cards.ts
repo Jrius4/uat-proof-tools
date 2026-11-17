@@ -67,9 +67,12 @@ export function stepBadgeHtml(u: number, id: string, label: string): string {
     <span style="color:#93c5fd">${esc(id)}</span> ${esc(label)}</div>`;
 }
 
-/** Top-centre banner shown while an expectation is being demonstrated. */
-export function checkBannerHtml(u: number, ok: boolean, text: string): string {
-  return `<div style="position:absolute;left:0;right:0;top:${u * 1.2}px;display:flex;justify-content:center;padding:0 ${u}px">
+/** Banner shown while an expectation is being demonstrated: top-centre, or top-left to keep a centred heading visible. */
+export function checkBannerHtml(u: number, ok: boolean, text: string, align: 'center' | 'left' = 'center'): string {
+  const box = align === 'left'
+    ? `left:${u}px;top:${u * 1.2}px;max-width:${u * 9.5}px;display:flex;justify-content:flex-start`
+    : `left:0;right:0;top:${u * 1.2}px;display:flex;justify-content:center;padding:0 ${u}px`;
+  return `<div style="position:absolute;${box}">
     <div style="background:${ok ? 'rgba(22,101,52,.94)' : 'rgba(153,27,27,.94)'};border-radius:${u * 0.5}px;padding:${u * 0.45}px ${u * 1}px;
       font-weight:700;font-size:${u * 1.05}px;line-height:1.3;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.4)">${ok ? '✓' : '✗'} ${esc(text)}</div></div>`;
 }
