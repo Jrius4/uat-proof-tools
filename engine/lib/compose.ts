@@ -193,7 +193,7 @@ export async function renderProfile(opts: {
       if (it.kind === 'check' || !seg.passed) {
         const text = !seg.passed && it.kind === 'step' ? 'Step did not complete' : p.stepBadge ? `${it.id} ${it.label}` : it.caption ?? it.narration;
         const f = join(work, `check-${i}.png`);
-        await cards.render(checkBannerHtml(u, seg.passed, text), f, { transparent: true });
+        await cards.render(checkBannerHtml(u, seg.passed, text, cfg.render.checkBanner === 'top-left' ? 'left' : 'center'), f, { transparent: true });
         ov.push({ png: f, fromMs: 0, toMs: seg.outDurMs });
       }
       segOverlays.push(ov);
